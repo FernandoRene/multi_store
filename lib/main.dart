@@ -1,3 +1,5 @@
+import 'screens/productos_screens.dart';
+import 'screens/punto_venta_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'models/database_models.dart';
@@ -69,6 +71,56 @@ class DashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               
+              // Acciones Rápidas
+              Text(
+                'Acciones Rápidas',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Botones de navegación
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => const ProductosScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.inventory_2),
+                      label: const Text('Gestión de Productos'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.all(16),
+                        backgroundColor: Colors.blue.shade600,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {               
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => const PuntoVentaScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.point_of_sale),
+                  label: const Text('Punto de Venta'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.all(16),
+                    backgroundColor: Colors.green.shade600,
+                    foregroundColor: Colors.white,
+                  ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
               // Título de KPIs
               Text(
                 'Estadísticas Generales',
@@ -252,6 +304,7 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ),
       ),
+      
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Refrescar datos
