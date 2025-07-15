@@ -1,0 +1,12 @@
+﻿{
+    "name": "Inventario Multi-tienda",
+    "short_name": "Inventario",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#1976d2",
+    "theme_color": "#1976d2",
+    "description": "Sistema de Gestión de Inventario Multi-tienda",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": []
+}

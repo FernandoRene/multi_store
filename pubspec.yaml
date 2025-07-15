@@ -1,0 +1,41 @@
+name: inventario_multitienda
+description: Sistema de Gestión de Inventario Multi-tienda con Geolocalización
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  
+  # Database - CONFIGURADO PARA MÓVILES
+  drift: ^2.14.1
+  sqlite3_flutter_libs: ^0.5.34
+  
+  # Utilities
+  json_annotation: ^4.9.0
+  intl: ^0.18.0
+  path_provider: ^2.1.5
+
+  # Icons
+  cupertino_icons: ^1.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  
+  # Code Generation
+  drift_dev: ^2.14.1
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
+
+flutter:
+  uses-material-design: true
