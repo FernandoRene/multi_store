@@ -8,7 +8,8 @@ import '../repositories/database_repositories.dart';
 
 // ===== PROVIDERS PARA GESTIÓN DE PRODUCTOS =====
 
-final filtroProductosProvider = StateProvider<FiltroProductos>((ref) => FiltroProductos());
+final filtroProductosProvider =
+    StateProvider<FiltroProductos>((ref) => FiltroProductos());
 
 final busquedaProductosProvider = StateProvider<String>((ref) => '');
 
@@ -22,7 +23,7 @@ final productosFilteredProvider = FutureProvider<List<Producto>>((ref) async {
   final filtro = ref.watch(filtroProductosProvider);
   final busqueda = ref.watch(busquedaProductosProvider);
   final categoria = ref.watch(categoriaSeleccionadaProvider);
-  
+
   final filtroCompleto = FiltroProductos(
     categoria: categoria,
     busqueda: busqueda.isEmpty ? null : busqueda,
@@ -31,7 +32,7 @@ final productosFilteredProvider = FutureProvider<List<Producto>>((ref) async {
     precioMinimo: filtro.precioMinimo,
     precioMaximo: filtro.precioMaximo,
   );
-  
+
   return await repository.obtenerTodos(filtro: filtroCompleto);
 });
 
@@ -68,12 +69,13 @@ class ProductosScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // Barra de búsqueda
+          // Barra de búsqueda - CORREGIDA
           Container(
             padding: const EdgeInsets.all(16),
             color: Theme.of(context).colorScheme.surface,
             child: Column(
               children: [
+                // Campo de búsqueda mejorado
                 TextField(
                   decoration: InputDecoration(
                     hintText: 'Buscar productos...',
@@ -81,7 +83,9 @@ class ProductosScreen extends ConsumerWidget {
                     suffixIcon: busqueda.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear),
-                            onPressed: () => ref.read(busquedaProductosProvider.notifier).state = '',
+                            onPressed: () => ref
+                                .read(busquedaProductosProvider.notifier)
+                                .state = '',
                           )
                         : null,
                     border: OutlineInputBorder(
@@ -89,81 +93,51 @@ class ProductosScreen extends ConsumerWidget {
                     ),
                     filled: true,
                     fillColor: Theme.of(context).colorScheme.background,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   onChanged: (value) {
                     ref.read(busquedaProductosProvider.notifier).state = value;
                   },
                 ),
                 const SizedBox(height: 12),
-                // Filtro de categorías
+                // Filtro de categorías - CORREGIDO
                 categorias.when(
-                  data: (listaCategorias) => _buildFiltroCategoria(listaCategorias, categoriaSeleccionada, ref),
-                  loading: () => const SizedBox(),
-                  error: (_, __) => const SizedBox(),
+                  data: (listaCategorias) => _buildFiltroCategoria(
+                      listaCategorias, categoriaSeleccionada, ref),
+                  loading: () => const SizedBox(height: 40),
+                  error: (_, __) => const SizedBox(height: 40),
                 ),
               ],
             ),
           ),
-          
+
           // Lista de productos
           Expanded(
             child: productos.when(
               data: (listaProductos) {
                 if (listaProductos.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.inventory_2_outlined,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          busqueda.isNotEmpty || categoriaSeleccionada != null
-                              ? 'No se encontraron productos'
-                              : 'No hay productos registrados',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (busqueda.isEmpty && categoriaSeleccionada == null)
-                          const Text(
-                            'Agrega tu primer producto',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                      ],
-                    ),
-                  );
+                  return _buildEstadoVacio(busqueda, categoriaSeleccionada);
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: listaProductos.length,
-                  itemBuilder: (context, index) {
-                    final producto = listaProductos[index];
-                    return _buildProductoCard(context, ref, producto);
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    ref.refresh(productosFilteredProvider);
                   },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: listaProductos.length,
+                    itemBuilder: (context, index) {
+                      final producto = listaProductos[index];
+                      return _buildProductoCard(context, ref, producto);
+                    },
+                  ),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error, size: 48, color: Colors.red[300]),
-                    const SizedBox(height: 16),
-                    Text('Error: $error'),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => ref.refresh(productosFilteredProvider),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              ),
+              error: (error, _) => _buildEstadoError(error, ref),
             ),
           ),
         ],
@@ -171,50 +145,65 @@ class ProductosScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const AgregarProductoScreen()),
+            MaterialPageRoute(
+                builder: (context) => const AgregarProductoScreen()),
           );
         },
         icon: const Icon(Icons.add),
-        label: const Text('Agregar Producto'),
+        label: const Text('Agregar'),
       ),
     );
   }
 
-  Widget _buildFiltroCategoria(List<String> categorias, String? categoriaSeleccionada, WidgetRef ref) {
+  Widget _buildFiltroCategoria(
+      List<String> categorias, String? categoriaSeleccionada, WidgetRef ref) {
     return SizedBox(
       height: 40,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          FilterChip(
-            label: const Text('Todas'),
-            selected: categoriaSeleccionada == null,
-            onSelected: (selected) {
-              ref.read(categoriaSeleccionadaProvider.notifier).state = null;
-            },
-          ),
-          const SizedBox(width: 8),
-          ...categorias.map((categoria) => Padding(
+          // Chip "Todas" - siempre presente
+          Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
-              label: Text(categoria),
-              selected: categoriaSeleccionada == categoria,
+              label: const Text('Todas'),
+              selected: categoriaSeleccionada == null,
               onSelected: (selected) {
-                ref.read(categoriaSeleccionadaProvider.notifier).state = 
-                    selected ? categoria : null;
+                ref.read(categoriaSeleccionadaProvider.notifier).state = null;
               },
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-          )),
+          ),
+          // Chips de categorías
+          ...categorias.map((categoria) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(
+                    categoria,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  selected: categoriaSeleccionada == categoria,
+                  onSelected: (selected) {
+                    ref.read(categoriaSeleccionadaProvider.notifier).state =
+                        selected ? categoria : null;
+                  },
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              )),
         ],
       ),
     );
   }
 
-  Widget _buildProductoCard(BuildContext context, WidgetRef ref, Producto producto) {
+  Widget _buildProductoCard(
+      BuildContext context, WidgetRef ref, Producto producto) {
     final stockBajo = producto.stockActual <= producto.stockMinimo;
-    
+    final sinStock = producto.stockActual <= 0;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
@@ -229,115 +218,213 @@ class ProductosScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ROW PRINCIPAL
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Información del producto - USA EXPANDED
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Nombre del producto
                         Text(
                           producto.nombre,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        if (producto.descripcion != null)
+                        // Descripción (si existe)
+                        if (producto.descripcion?.isNotEmpty == true) ...[
+                          const SizedBox(height: 4),
                           Text(
                             producto.descripcion!,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
+                        ],
                       ],
                     ),
                   ),
+                  const SizedBox(width: 14),
+                  // Precio y menú - DIMENSIONES FIJAS
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Bs. ${producto.precioVenta.toStringAsFixed(2)}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
+                      // Precio
+                      Container(
+                        constraints: const BoxConstraints(minWidth: 80),
+                        child: Text(
+                          'Bs. ${producto.precioVenta.toStringAsFixed(2)}',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: sinStock
+                                        ? Colors.grey
+                                        : Theme.of(context).colorScheme.primary,
+                                  ),
+                          textAlign: TextAlign.end,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      PopupMenuButton<String>(
-                        onSelected: (value) => _onMenuItemSelected(context, ref, value, producto),
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'ver',
-                            child: Row(
-                              children: [
-                                Icon(Icons.visibility),
-                                SizedBox(width: 8),
-                                Text('Ver detalles'),
-                              ],
+                      // Menú de opciones
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: PopupMenuButton<String>(
+                          onSelected: (value) => _onMenuItemSelected(
+                              context, ref, value, producto),
+                          icon: const Icon(Icons.more_vert, size: 20),
+                          padding: EdgeInsets.zero,
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'ver',
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.visibility, size: 16),
+                                  SizedBox(width: 8),
+                                  Text('Ver', style: TextStyle(fontSize: 14)),
+                                ],
+                              ),
                             ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'editar',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit),
-                                SizedBox(width: 8),
-                                Text('Editar'),
-                              ],
+                            const PopupMenuItem(
+                              value: 'editar',
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.edit, size: 16),
+                                  SizedBox(width: 8),
+                                  Text('Editar',
+                                      style: TextStyle(fontSize: 14)),
+                                ],
+                              ),
                             ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'eliminar',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Eliminar', style: TextStyle(color: Colors.red)),
-                              ],
+                            const PopupMenuItem(
+                              value: 'eliminar',
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.delete,
+                                      color: Colors.red, size: 16),
+                                  SizedBox(width: 8),
+                                  Text('Eliminar',
+                                      style: TextStyle(
+                                          color: Colors.red, fontSize: 14)),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
+
               const SizedBox(height: 12),
+
+              // CHIPS Y ESTADO CORREGIDOS
               Row(
                 children: [
-                  Chip(
-                    label: Text(producto.categoria),
-                    backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                  ),
-                  const SizedBox(width: 8),
-                  if (producto.codigoBarras != null)
-                    Chip(
-                      label: Text(producto.codigoBarras!),
-                      backgroundColor: Colors.grey[200],
+                  // Categoría - TAMAÑO FLEXIBLE
+                  Flexible(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 120),
+                      child: Chip(
+                        label: Text(
+                          producto.categoria,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        backgroundColor:
+                            Theme.of(context).colorScheme.secondaryContainer,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
                     ),
+                  ),
+
+                  // Código de barras (si existe)
+                  if (producto.codigoBarras?.isNotEmpty == true) ...[
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 100),
+                        child: Chip(
+                          label: Text(
+                            producto.codigoBarras!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                          backgroundColor: Colors.grey[200],
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ),
+                  ],
+
                   const Spacer(),
+
+                  // Indicador de stock - TAMAÑO FIJO
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: stockBajo ? Colors.red[100] : Colors.green[100],
+                      color: sinStock
+                          ? Colors.red[100]
+                          : stockBajo
+                              ? Colors.orange[100]
+                              : Colors.green[100],
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          stockBajo ? Icons.warning : Icons.check_circle,
-                          size: 16,
-                          color: stockBajo ? Colors.red[700] : Colors.green[700],
+                          sinStock
+                              ? Icons.error
+                              : stockBajo
+                                  ? Icons.warning
+                                  : Icons.check_circle,
+                          size: 14,
+                          color: sinStock
+                              ? Colors.red[700]
+                              : stockBajo
+                                  ? Colors.orange[700]
+                                  : Colors.green[700],
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Stock: ${producto.stockActual}',
+                          sinStock
+                              ? 'Sin Stock'
+                              : 'Stock: ${producto.stockActual}',
                           style: TextStyle(
-                            color: stockBajo ? Colors.red[700] : Colors.green[700],
+                            color: sinStock
+                                ? Colors.red[700]
+                                : stockBajo
+                                    ? Colors.orange[700]
+                                    : Colors.green[700],
                             fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                            fontSize: 11,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -351,7 +438,8 @@ class ProductosScreen extends ConsumerWidget {
     );
   }
 
-  void _onMenuItemSelected(BuildContext context, WidgetRef ref, String value, Producto producto) {
+  void _onMenuItemSelected(
+      BuildContext context, WidgetRef ref, String value, Producto producto) {
     switch (value) {
       case 'ver':
         Navigator.of(context).push(
@@ -373,12 +461,14 @@ class ProductosScreen extends ConsumerWidget {
     }
   }
 
-  void _mostrarDialogoEliminar(BuildContext context, WidgetRef ref, Producto producto) {
+  void _mostrarDialogoEliminar(
+      BuildContext context, WidgetRef ref, Producto producto) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar Producto'),
-        content: Text('¿Estás seguro de que deseas eliminar "${producto.nombre}"?'),
+        content:
+            Text('¿Estás seguro de que deseas eliminar "${producto.nombre}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -390,7 +480,7 @@ class ProductosScreen extends ConsumerWidget {
               Navigator.of(context).pop();
               final repository = ref.read(productosRepositoryProvider);
               final success = await repository.eliminar(producto.id);
-              
+
               if (context.mounted) {
                 if (success) {
                   ref.refresh(productosFilteredProvider);
@@ -420,9 +510,106 @@ class ProductosScreen extends ConsumerWidget {
   void _mostrarFiltros(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
-      builder: (context) => FiltrosProductosBottomSheet(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: const FiltrosProductosBottomSheet(),
+      ),
     );
   }
+}
+
+// ESTADO VACÍO MEJORADO
+Widget _buildEstadoVacio(String busqueda, String? categoriaSeleccionada) {
+  final hayFiltros = busqueda.isNotEmpty || categoriaSeleccionada != null;
+
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            hayFiltros ? Icons.search_off : Icons.inventory_2_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            hayFiltros
+                ? 'No se encontraron productos'
+                : 'No hay productos registrados',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            hayFiltros
+                ? 'Intenta cambiar los filtros de búsqueda'
+                : 'Agrega tu primer producto para comenzar',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// ESTADO DE ERROR MEJORADO
+Widget _buildEstadoError(Object error, WidgetRef ref) {
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error, size: 48, color: Colors.red[300]),
+          const SizedBox(height: 16),
+          const Text(
+            'Error al cargar productos',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error.toString(),
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => ref.refresh(productosFilteredProvider),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reintentar'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 // ===== 2. PANTALLA AGREGAR PRODUCTO =====
@@ -431,7 +618,8 @@ class AgregarProductoScreen extends ConsumerStatefulWidget {
   const AgregarProductoScreen({super.key});
 
   @override
-  ConsumerState<AgregarProductoScreen> createState() => _AgregarProductoScreenState();
+  ConsumerState<AgregarProductoScreen> createState() =>
+      _AgregarProductoScreenState();
 }
 
 class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
@@ -444,7 +632,7 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
   final _precioCompraController = TextEditingController();
   final _stockActualController = TextEditingController();
   final _stockMinimoController = TextEditingController();
-  
+
   String _unidadMedida = 'unidad';
   bool _guardando = false;
 
@@ -486,9 +674,10 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                     children: [
                       Text(
                         'Información Básica',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -500,7 +689,9 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value != null && value.isNotEmpty && value.length < 8) {
+                          if (value != null &&
+                              value.isNotEmpty &&
+                              value.length < 8) {
                             return 'El código debe tener al menos 8 caracteres';
                           }
                           return null;
@@ -536,7 +727,8 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                       ),
                       const SizedBox(height: 16),
                       categorias.when(
-                        data: (listaCategorias) => _buildCategoriaField(listaCategorias),
+                        data: (listaCategorias) =>
+                            _buildCategoriaField(listaCategorias),
                         loading: () => TextFormField(
                           controller: _categoriaController,
                           decoration: const InputDecoration(
@@ -570,9 +762,9 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Precios
               Card(
                 child: Padding(
@@ -582,24 +774,28 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                     children: [
                       Text(
                         'Precios',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       Row(
                         children: [
                           Expanded(
                             child: TextFormField(
                               controller: _precioCompraController,
                               decoration: const InputDecoration(
-                                labelText: 'Precio de Compra *',
+                                labelText: 'Precio de Compra',
                                 prefixText: 'Bs. ',
                                 prefixIcon: Icon(Icons.money_off),
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'^\d+\.?\d{0,2}'))
+                              ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Requerido';
@@ -613,18 +809,21 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                               onChanged: (_) => _calcularMargen(),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: TextFormField(
                               controller: _precioVentaController,
                               decoration: const InputDecoration(
-                                labelText: 'Precio de Venta *',
+                                labelText: 'Precio de Venta',
                                 prefixText: 'Bs. ',
                                 prefixIcon: Icon(Icons.attach_money),
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'^\d+\.?\d{0,2}'))
+                              ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Requerido';
@@ -633,8 +832,10 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                                 if (precio == null || precio <= 0) {
                                   return 'Precio inválido';
                                 }
-                                final precioCompra = double.tryParse(_precioCompraController.text);
-                                if (precioCompra != null && precio < precioCompra) {
+                                final precioCompra = double.tryParse(
+                                    _precioCompraController.text);
+                                if (precioCompra != null &&
+                                    precio < precioCompra) {
                                   return 'Menor que compra';
                                 }
                                 return null;
@@ -644,7 +845,7 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -670,9 +871,9 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Inventario
               Card(
                 child: Padding(
@@ -682,9 +883,10 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                     children: [
                       Text(
                         'Inventario',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -698,7 +900,9 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Requerido';
@@ -721,7 +925,9 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Requerido';
@@ -745,15 +951,20 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                           border: OutlineInputBorder(),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'unidad', child: Text('Unidad')),
-                          DropdownMenuItem(value: 'kg', child: Text('Kilogramo')),
+                          DropdownMenuItem(
+                              value: 'unidad', child: Text('Unidad')),
+                          DropdownMenuItem(
+                              value: 'kg', child: Text('Kilogramo')),
                           DropdownMenuItem(value: 'g', child: Text('Gramo')),
                           DropdownMenuItem(value: 'l', child: Text('Litro')),
-                          DropdownMenuItem(value: 'ml', child: Text('Mililitro')),
+                          DropdownMenuItem(
+                              value: 'ml', child: Text('Mililitro')),
                           DropdownMenuItem(value: 'm', child: Text('Metro')),
-                          DropdownMenuItem(value: 'cm', child: Text('Centímetro')),
+                          DropdownMenuItem(
+                              value: 'cm', child: Text('Centímetro')),
                           DropdownMenuItem(value: 'caja', child: Text('Caja')),
-                          DropdownMenuItem(value: 'paquete', child: Text('Paquete')),
+                          DropdownMenuItem(
+                              value: 'paquete', child: Text('Paquete')),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -765,15 +976,16 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Botones
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+                      onPressed:
+                          _guardando ? null : () => Navigator.of(context).pop(),
                       child: const Text('Cancelar'),
                     ),
                   ),
@@ -801,7 +1013,9 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
 
   Widget _buildCategoriaField(List<String> categorias) {
     return DropdownButtonFormField<String>(
-      value: categorias.contains(_categoriaController.text) ? _categoriaController.text : null,
+      value: categorias.contains(_categoriaController.text)
+          ? _categoriaController.text
+          : null,
       decoration: const InputDecoration(
         labelText: 'Categoría *',
         prefixIcon: Icon(Icons.category),
@@ -809,9 +1023,9 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
       ),
       items: [
         ...categorias.map((categoria) => DropdownMenuItem(
-          value: categoria,
-          child: Text(categoria),
-        )),
+              value: categoria,
+              child: Text(categoria),
+            )),
         const DropdownMenuItem(
           value: 'nueva',
           child: Text('+ Nueva categoría'),
@@ -875,34 +1089,38 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
   String _calcularMargenTexto() {
     final precioCompra = double.tryParse(_precioCompraController.text);
     final precioVenta = double.tryParse(_precioVentaController.text);
-    
+
     if (precioCompra != null && precioVenta != null && precioCompra > 0) {
       final margen = precioVenta - precioCompra;
       final porcentaje = (margen / precioCompra) * 100;
       return 'Bs. ${margen.toStringAsFixed(2)} (${porcentaje.toStringAsFixed(1)}%)';
     }
-    
+
     return 'Bs. 0.00 (0.0%)';
   }
 
   Future<void> _guardarProducto() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() {
       _guardando = true;
     });
 
     try {
       final repository = ref.read(productosRepositoryProvider);
-      
+
       final precioCompra = double.parse(_precioCompraController.text);
       final precioVenta = double.parse(_precioVentaController.text);
       final margenGanancia = precioVenta - precioCompra;
-      
+
       final producto = ProductosCompanion(
-        codigoBarras: drift.Value(_codigoBarrasController.text.isEmpty ? null : _codigoBarrasController.text),
+        codigoBarras: drift.Value(_codigoBarrasController.text.isEmpty
+            ? null
+            : _codigoBarrasController.text),
         nombre: drift.Value(_nombreController.text),
-        descripcion: drift.Value(_descripcionController.text.isEmpty ? null : _descripcionController.text),
+        descripcion: drift.Value(_descripcionController.text.isEmpty
+            ? null
+            : _descripcionController.text),
         categoria: drift.Value(_categoriaController.text),
         precioVenta: drift.Value(precioVenta),
         precioCompra: drift.Value(precioCompra),
@@ -914,11 +1132,11 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
       );
 
       await repository.insertar(producto);
-      
+
       if (mounted) {
         ref.refresh(productosFilteredProvider);
         ref.refresh(categoriasProvider);
-        
+
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -950,11 +1168,12 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
 
 class EditarProductoScreen extends ConsumerStatefulWidget {
   final Producto producto;
-  
+
   const EditarProductoScreen({super.key, required this.producto});
 
   @override
-  ConsumerState<EditarProductoScreen> createState() => _EditarProductoScreenState();
+  ConsumerState<EditarProductoScreen> createState() =>
+      _EditarProductoScreenState();
 }
 
 class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
@@ -967,21 +1186,28 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
   late final TextEditingController _precioCompraController;
   late final TextEditingController _stockActualController;
   late final TextEditingController _stockMinimoController;
-  
+
   late String _unidadMedida;
   bool _guardando = false;
 
   @override
   void initState() {
     super.initState();
-    _codigoBarrasController = TextEditingController(text: widget.producto.codigoBarras ?? '');
+    _codigoBarrasController =
+        TextEditingController(text: widget.producto.codigoBarras ?? '');
     _nombreController = TextEditingController(text: widget.producto.nombre);
-    _descripcionController = TextEditingController(text: widget.producto.descripcion ?? '');
-    _categoriaController = TextEditingController(text: widget.producto.categoria);
-    _precioVentaController = TextEditingController(text: widget.producto.precioVenta.toString());
-    _precioCompraController = TextEditingController(text: widget.producto.precioCompra.toString());
-    _stockActualController = TextEditingController(text: widget.producto.stockActual.toString());
-    _stockMinimoController = TextEditingController(text: widget.producto.stockMinimo.toString());
+    _descripcionController =
+        TextEditingController(text: widget.producto.descripcion ?? '');
+    _categoriaController =
+        TextEditingController(text: widget.producto.categoria);
+    _precioVentaController =
+        TextEditingController(text: widget.producto.precioVenta.toString());
+    _precioCompraController =
+        TextEditingController(text: widget.producto.precioCompra.toString());
+    _stockActualController =
+        TextEditingController(text: widget.producto.stockActual.toString());
+    _stockMinimoController =
+        TextEditingController(text: widget.producto.stockMinimo.toString());
     _unidadMedida = widget.producto.unidadMedida;
   }
 
@@ -1009,7 +1235,8 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.delete),
-            onPressed: () => _mostrarDialogoEliminar(),
+            onPressed: () =>
+                _mostrarDialogoEliminar(context, ref, widget.producto),
           ),
         ],
       ),
@@ -1044,9 +1271,9 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Información básica
               Card(
                 child: Padding(
@@ -1056,9 +1283,10 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                     children: [
                       Text(
                         'Información Básica',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -1069,7 +1297,9 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value != null && value.isNotEmpty && value.length < 8) {
+                          if (value != null &&
+                              value.isNotEmpty &&
+                              value.length < 8) {
                             return 'El código debe tener al menos 8 caracteres';
                           }
                           return null;
@@ -1105,7 +1335,8 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                       ),
                       const SizedBox(height: 16),
                       categorias.when(
-                        data: (listaCategorias) => _buildCategoriaField(listaCategorias),
+                        data: (listaCategorias) =>
+                            _buildCategoriaField(listaCategorias),
                         loading: () => TextFormField(
                           controller: _categoriaController,
                           decoration: const InputDecoration(
@@ -1139,9 +1370,9 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Precios
               Card(
                 child: Padding(
@@ -1151,9 +1382,10 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                     children: [
                       Text(
                         'Precios',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -1168,7 +1400,10 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'^\d+\.?\d{0,2}'))
+                              ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Requerido';
@@ -1193,7 +1428,10 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'^\d+\.?\d{0,2}'))
+                              ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Requerido';
@@ -1202,8 +1440,10 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                                 if (precio == null || precio <= 0) {
                                   return 'Precio inválido';
                                 }
-                                final precioCompra = double.tryParse(_precioCompraController.text);
-                                if (precioCompra != null && precio < precioCompra) {
+                                final precioCompra = double.tryParse(
+                                    _precioCompraController.text);
+                                if (precioCompra != null &&
+                                    precio < precioCompra) {
                                   return 'Menor que compra';
                                 }
                                 return null;
@@ -1239,9 +1479,9 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Inventario
               Card(
                 child: Padding(
@@ -1251,9 +1491,10 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                     children: [
                       Text(
                         'Inventario',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -1267,7 +1508,9 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Requerido';
@@ -1290,7 +1533,9 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Requerido';
@@ -1314,15 +1559,20 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                           border: OutlineInputBorder(),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'unidad', child: Text('Unidad')),
-                          DropdownMenuItem(value: 'kg', child: Text('Kilogramo')),
+                          DropdownMenuItem(
+                              value: 'unidad', child: Text('Unidad')),
+                          DropdownMenuItem(
+                              value: 'kg', child: Text('Kilogramo')),
                           DropdownMenuItem(value: 'g', child: Text('Gramo')),
                           DropdownMenuItem(value: 'l', child: Text('Litro')),
-                          DropdownMenuItem(value: 'ml', child: Text('Mililitro')),
+                          DropdownMenuItem(
+                              value: 'ml', child: Text('Mililitro')),
                           DropdownMenuItem(value: 'm', child: Text('Metro')),
-                          DropdownMenuItem(value: 'cm', child: Text('Centímetro')),
+                          DropdownMenuItem(
+                              value: 'cm', child: Text('Centímetro')),
                           DropdownMenuItem(value: 'caja', child: Text('Caja')),
-                          DropdownMenuItem(value: 'paquete', child: Text('Paquete')),
+                          DropdownMenuItem(
+                              value: 'paquete', child: Text('Paquete')),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -1334,15 +1584,16 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Botones
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+                      onPressed:
+                          _guardando ? null : () => Navigator.of(context).pop(),
                       child: const Text('Cancelar'),
                     ),
                   ),
@@ -1370,7 +1621,9 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
 
   Widget _buildCategoriaField(List<String> categorias) {
     return DropdownButtonFormField<String>(
-      value: categorias.contains(_categoriaController.text) ? _categoriaController.text : null,
+      value: categorias.contains(_categoriaController.text)
+          ? _categoriaController.text
+          : null,
       decoration: const InputDecoration(
         labelText: 'Categoría *',
         prefixIcon: Icon(Icons.category),
@@ -1378,9 +1631,9 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
       ),
       items: [
         ...categorias.map((categoria) => DropdownMenuItem(
-          value: categoria,
-          child: Text(categoria),
-        )),
+              value: categoria,
+              child: Text(categoria),
+            )),
         const DropdownMenuItem(
           value: 'nueva',
           child: Text('+ Nueva categoría'),
@@ -1444,22 +1697,27 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
   String _calcularMargenTexto() {
     final precioCompra = double.tryParse(_precioCompraController.text);
     final precioVenta = double.tryParse(_precioVentaController.text);
-    
+
     if (precioCompra != null && precioVenta != null && precioCompra > 0) {
       final margen = precioVenta - precioCompra;
       final porcentaje = (margen / precioCompra) * 100;
       return 'Bs. ${margen.toStringAsFixed(2)} (${porcentaje.toStringAsFixed(1)}%)';
     }
-    
+
     return 'Bs. 0.00 (0.0%)';
   }
 
-  void _mostrarDialogoEliminar() {
+  void _mostrarDialogoEliminar(
+      BuildContext context, WidgetRef ref, Producto producto) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar Producto'),
-        content: Text('¿Estás seguro de que deseas eliminar "${widget.producto.nombre}"?'),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar "${producto.nombre}"?',
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -1470,12 +1728,11 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
             onPressed: () async {
               Navigator.of(context).pop();
               final repository = ref.read(productosRepositoryProvider);
-              final success = await repository.eliminar(widget.producto.id);
-              
-              if (mounted) {
+              final success = await repository.eliminar(producto.id);
+
+              if (context.mounted) {
                 if (success) {
                   ref.refresh(productosFilteredProvider);
-                  Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Producto eliminado exitosamente'),
@@ -1501,22 +1758,26 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
 
   Future<void> _actualizarProducto() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() {
       _guardando = true;
     });
 
     try {
       final repository = ref.read(productosRepositoryProvider);
-      
+
       final precioCompra = double.parse(_precioCompraController.text);
       final precioVenta = double.parse(_precioVentaController.text);
       final margenGanancia = precioVenta - precioCompra;
-      
+
       final productoActualizado = ProductosCompanion(
-        codigoBarras: drift.Value(_codigoBarrasController.text.isEmpty ? null : _codigoBarrasController.text),
+        codigoBarras: drift.Value(_codigoBarrasController.text.isEmpty
+            ? null
+            : _codigoBarrasController.text),
         nombre: drift.Value(_nombreController.text),
-        descripcion: drift.Value(_descripcionController.text.isEmpty ? null : _descripcionController.text),
+        descripcion: drift.Value(_descripcionController.text.isEmpty
+            ? null
+            : _descripcionController.text),
         categoria: drift.Value(_categoriaController.text),
         precioVenta: drift.Value(precioVenta),
         precioCompra: drift.Value(precioCompra),
@@ -1527,11 +1788,11 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
       );
 
       await repository.actualizar(widget.producto.id, productoActualizado);
-      
+
       if (mounted) {
         ref.refresh(productosFilteredProvider);
         ref.refresh(categoriasProvider);
-        
+
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1563,15 +1824,15 @@ class _EditarProductoScreenState extends ConsumerState<EditarProductoScreen> {
 
 class DetalleProductoScreen extends ConsumerWidget {
   final Producto producto;
-  
+
   const DetalleProductoScreen({super.key, required this.producto});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stockBajo = producto.stockActual <= producto.stockMinimo;
     final margenReal = producto.precioVenta - producto.precioCompra;
-    final porcentajeMargen = producto.precioCompra > 0 
-        ? (margenReal / producto.precioCompra) * 100 
+    final porcentajeMargen = producto.precioCompra > 0
+        ? (margenReal / producto.precioCompra) * 100
         : 0.0;
 
     return Scaffold(
@@ -1584,13 +1845,15 @@ class DetalleProductoScreen extends ConsumerWidget {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => EditarProductoScreen(producto: producto),
+                  builder: (context) =>
+                      EditarProductoScreen(producto: producto),
                 ),
               );
             },
           ),
           PopupMenuButton<String>(
-            onSelected: (value) => _onMenuItemSelected(context, ref, value),
+            onSelected: (value) =>
+                _onMenuItemSelected(context, ref, value, producto),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'editar',
@@ -1631,12 +1894,15 @@ class DetalleProductoScreen extends ConsumerWidget {
                     Row(
                       children: [
                         CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primaryContainer,
                           radius: 30,
                           child: Icon(
                             Icons.inventory_2,
                             size: 30,
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -1646,16 +1912,22 @@ class DetalleProductoScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 producto.nombre,
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
                               if (producto.descripcion != null)
                                 Text(
                                   producto.descripcion!,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: Colors.grey[600],
+                                      ),
                                 ),
                             ],
                           ),
@@ -1667,7 +1939,8 @@ class DetalleProductoScreen extends ConsumerWidget {
                       children: [
                         Chip(
                           label: Text(producto.categoria),
-                          backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.secondaryContainer,
                         ),
                         const SizedBox(width: 8),
                         if (producto.codigoBarras != null)
@@ -1677,15 +1950,20 @@ class DetalleProductoScreen extends ConsumerWidget {
                           ),
                         const Spacer(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: producto.activo ? Colors.green[100] : Colors.red[100],
+                            color: producto.activo
+                                ? Colors.green[100]
+                                : Colors.red[100],
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             producto.activo ? 'ACTIVO' : 'INACTIVO',
                             style: TextStyle(
-                              color: producto.activo ? Colors.green[700] : Colors.red[700],
+                              color: producto.activo
+                                  ? Colors.green[700]
+                                  : Colors.red[700],
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
@@ -1697,23 +1975,23 @@ class DetalleProductoScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Precios
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Información de Precios',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     Row(
                       children: [
                         Expanded(
@@ -1725,7 +2003,7 @@ class DetalleProductoScreen extends ConsumerWidget {
                             context,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 14),
                         Expanded(
                           child: _buildInfoCard(
                             'Precio de Venta',
@@ -1737,7 +2015,7 @@ class DetalleProductoScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -1762,10 +2040,13 @@ class DetalleProductoScreen extends ConsumerWidget {
                                 ),
                                 Text(
                                   'Bs. ${margenReal.toStringAsFixed(2)} (${porcentajeMargen.toStringAsFixed(1)}%)',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: Colors.blue[700],
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        color: Colors.blue[700],
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
                               ],
                             ),
@@ -1777,23 +2058,23 @@ class DetalleProductoScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Inventario
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Información de Inventario',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     Row(
                       children: [
                         Expanded(
@@ -1805,7 +2086,7 @@ class DetalleProductoScreen extends ConsumerWidget {
                             context,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 14),
                         Expanded(
                           child: _buildInfoCard(
                             'Stock Mínimo',
@@ -1817,7 +2098,7 @@ class DetalleProductoScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     if (stockBajo)
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -1851,17 +2132,17 @@ class DetalleProductoScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                    const SizedBox(height: 16),
-                    _buildInfoRow('Valor en Inventario', 
+                    const SizedBox(height: 14),
+                    _buildInfoRow('Valor en Inventario',
                         'Bs. ${(producto.stockActual * producto.precioCompra).toStringAsFixed(2)}'),
                     _buildInfoRow('Unidad de Medida', producto.unidadMedida),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Información adicional
             Card(
               child: Padding(
@@ -1872,17 +2153,18 @@ class DetalleProductoScreen extends ConsumerWidget {
                     Text(
                       'Información Adicional',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(height: 16),
                     _buildInfoRow('ID del Producto', producto.id.toString()),
                     if (producto.codigoBarras != null)
                       _buildInfoRow('Código de Barras', producto.codigoBarras!),
                     _buildInfoRow('Tienda ID', producto.tiendaId),
-                    _buildInfoRow('Fecha de Creación', 
+                    _buildInfoRow('Fecha de Creación',
                         '${producto.fechaCreacion.day}/${producto.fechaCreacion.month}/${producto.fechaCreacion.year}'),
-                    _buildInfoRow('Estado', producto.activo ? 'Activo' : 'Inactivo'),
+                    _buildInfoRow(
+                        'Estado', producto.activo ? 'Activo' : 'Inactivo'),
                   ],
                 ),
               ),
@@ -1904,7 +2186,8 @@ class DetalleProductoScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoCard(String title, String value, IconData icon, Color color, BuildContext context) {
+  Widget _buildInfoCard(String title, String value, IconData icon, Color color,
+      BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1933,9 +2216,9 @@ class DetalleProductoScreen extends ConsumerWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
         ],
       ),
@@ -1969,8 +2252,16 @@ class DetalleProductoScreen extends ConsumerWidget {
     );
   }
 
-  void _onMenuItemSelected(BuildContext context, WidgetRef ref, String value) {
+  void _onMenuItemSelected(
+      BuildContext context, WidgetRef ref, String value, Producto producto) {
     switch (value) {
+      case 'ver':
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => DetalleProductoScreen(producto: producto),
+          ),
+        );
+        break;
       case 'editar':
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -1979,17 +2270,22 @@ class DetalleProductoScreen extends ConsumerWidget {
         );
         break;
       case 'eliminar':
-        _mostrarDialogoEliminar(context, ref);
+        _mostrarDialogoEliminar(context, ref, producto);
         break;
     }
   }
 
-  void _mostrarDialogoEliminar(BuildContext context, WidgetRef ref) {
+  void _mostrarDialogoEliminar(
+      BuildContext context, WidgetRef ref, Producto producto) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar Producto'),
-        content: Text('¿Estás seguro de que deseas eliminar "${producto.nombre}"?'),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar "${producto.nombre}"?',
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -2001,11 +2297,10 @@ class DetalleProductoScreen extends ConsumerWidget {
               Navigator.of(context).pop();
               final repository = ref.read(productosRepositoryProvider);
               final success = await repository.eliminar(producto.id);
-              
+
               if (context.mounted) {
                 if (success) {
                   ref.refresh(productosFilteredProvider);
-                  Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Producto eliminado exitosamente'),
@@ -2033,74 +2328,118 @@ class DetalleProductoScreen extends ConsumerWidget {
 // ===== BOTTOM SHEET DE FILTROS =====
 
 class FiltrosProductosBottomSheet extends ConsumerWidget {
+  const FiltrosProductosBottomSheet({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filtro = ref.watch(filtroProductosProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Filtros de Productos',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+    return Column(
+      children: [
+        // Handle del modal
+        Container(
+          margin: const EdgeInsets.only(top: 8),
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Colors.grey[300],
+            borderRadius: BorderRadius.circular(2),
           ),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            title: const Text('Solo productos activos'),
-            value: filtro.soloActivos ?? true,
-            onChanged: (value) {
-              ref.read(filtroProductosProvider.notifier).state = FiltroProductos(
-                categoria: filtro.categoria,
-                soloActivos: value,
-                soloStockBajo: filtro.soloStockBajo,
-                busqueda: filtro.busqueda,
-                precioMinimo: filtro.precioMinimo,
-                precioMaximo: filtro.precioMaximo,
-              );
-            },
-          ),
-          SwitchListTile(
-            title: const Text('Solo productos con stock bajo'),
-            value: filtro.soloStockBajo ?? false,
-            onChanged: (value) {
-              ref.read(filtroProductosProvider.notifier).state = FiltroProductos(
-                categoria: filtro.categoria,
-                soloActivos: filtro.soloActivos,
-                soloStockBajo: value,
-                busqueda: filtro.busqueda,
-                precioMinimo: filtro.precioMinimo,
-                precioMaximo: filtro.precioMaximo,
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          Row(
+        ),
+
+        // Header
+        Container(
+          padding: const EdgeInsets.all(16),
+          child: Row(
             children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    ref.read(filtroProductosProvider.notifier).state = FiltroProductos();
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Limpiar Filtros'),
+              const Icon(Icons.filter_list),
+              const SizedBox(width: 8),
+              const Text(
+                'Filtros de Productos',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Aplicar'),
-                ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+
+        const Divider(height: 1),
+
+        // Contenido
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SwitchListTile(
+                  title: const Text('Solo productos activos'),
+                  subtitle: const Text('Ocultar productos desactivados'),
+                  value: filtro.soloActivos ?? true,
+                  onChanged: (value) {
+                    ref.read(filtroProductosProvider.notifier).state =
+                        FiltroProductos(
+                      categoria: filtro.categoria,
+                      soloActivos: value,
+                      soloStockBajo: filtro.soloStockBajo,
+                      busqueda: filtro.busqueda,
+                      precioMinimo: filtro.precioMinimo,
+                      precioMaximo: filtro.precioMaximo,
+                    );
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('Solo productos con stock bajo'),
+                  subtitle: const Text(
+                      'Mostrar solo productos que necesitan reposición'),
+                  value: filtro.soloStockBajo ?? false,
+                  onChanged: (value) {
+                    ref.read(filtroProductosProvider.notifier).state =
+                        FiltroProductos(
+                      categoria: filtro.categoria,
+                      soloActivos: filtro.soloActivos,
+                      soloStockBajo: value,
+                      busqueda: filtro.busqueda,
+                      precioMinimo: filtro.precioMinimo,
+                      precioMaximo: filtro.precioMaximo,
+                    );
+                  },
+                ),
+                const Spacer(),
+                // Botones
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          ref.read(filtroProductosProvider.notifier).state =
+                              FiltroProductos();
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Limpiar'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Aplicar'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
