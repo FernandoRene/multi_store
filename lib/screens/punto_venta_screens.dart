@@ -76,7 +76,7 @@ final productosParaPOSProvider = FutureProvider<List<Producto>>((ref) async {
   final busqueda = ref.watch(busquedaProductoPOSProvider);
 
   final filtro = FiltroProductos(
-    busqueda: busqueda.isEmpty ? null : busqueda,
+    busqueda: busqueda.trim().isEmpty ? null : busqueda.trim(),
     soloActivos: true,
   );
 
@@ -164,7 +164,6 @@ class PuntoVentaScreen extends ConsumerWidget {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          // Indicador de carrito mejorado
           Container(
             margin: const EdgeInsets.only(right: 16),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -198,8 +197,9 @@ class PuntoVentaScreen extends ConsumerWidget {
           Expanded(
             child: _buildPanelProductos(context, ref),
           ),
-          // Espacio para el bottom sheet
-          if (!carrito.isEmpty) const SizedBox(height: 120),
+          // Espacio reducido para el bottom sheet
+          if (!carrito.isEmpty)
+            const SizedBox(height: 100), // Reducido de 120 a 100
         ],
       ),
       // Bottom sheet persistente
@@ -209,14 +209,14 @@ class PuntoVentaScreen extends ConsumerWidget {
     );
   }
 
-  // PANEL DE PRODUCTOS CORREGIDO
+  // PANEL DE PRODUCTOS
   Widget _buildPanelProductos(BuildContext context, WidgetRef ref) {
     final productos = ref.watch(productosParaPOSProvider);
     final busqueda = ref.watch(busquedaProductoPOSProvider);
 
     return Column(
       children: [
-        // Barra de búsqueda mejorada
+        // Barra de búsqueda CORREGIDA
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -234,7 +234,6 @@ class PuntoVentaScreen extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  // Campo de búsqueda
                   Expanded(
                     child: TextField(
                       decoration: InputDecoration(
@@ -246,9 +245,12 @@ class PuntoVentaScreen extends ConsumerWidget {
                             if (busqueda.isNotEmpty)
                               IconButton(
                                 icon: const Icon(Icons.clear),
-                                onPressed: () => ref
-                                    .read(busquedaProductoPOSProvider.notifier)
-                                    .state = '',
+                                onPressed: () {
+                                  ref
+                                      .read(
+                                          busquedaProductoPOSProvider.notifier)
+                                      .state = '';
+                                },
                               ),
                             IconButton(
                               icon: const Icon(Icons.qr_code_scanner),
@@ -277,23 +279,36 @@ class PuntoVentaScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              // Tip informativo
+              // Tip informativo mejorado
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: busqueda.isEmpty ? Colors.green[50] : Colors.blue[50],
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue[200]!),
+                  border: Border.all(
+                      color: busqueda.isEmpty
+                          ? Colors.green[200]!
+                          : Colors.blue[200]!),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info, color: Colors.blue[600], size: 16),
+                    Icon(
+                      busqueda.isEmpty ? Icons.shopping_cart : Icons.search,
+                      color: busqueda.isEmpty
+                          ? Colors.green[600]
+                          : Colors.blue[600],
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Busca por nombre o usa el escáner de código de barras',
+                        busqueda.isEmpty
+                            ? 'Mostrando todos los productos disponibles'
+                            : 'Filtrando por: "$busqueda"',
                         style: TextStyle(
-                          color: Colors.blue[600],
+                          color: busqueda.isEmpty
+                              ? Colors.green[600]
+                              : Colors.blue[600],
                           fontSize: 12,
                         ),
                       ),
@@ -305,7 +320,7 @@ class PuntoVentaScreen extends ConsumerWidget {
           ),
         ),
 
-        // Lista de productos
+        // Lista de productos con contador
         Expanded(
           child: productos.when(
             data: (listaProductos) {
@@ -313,16 +328,76 @@ class PuntoVentaScreen extends ConsumerWidget {
                 return _buildEstadoVacio(busqueda);
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: listaProductos.length,
-                itemBuilder: (context, index) {
-                  final producto = listaProductos[index];
-                  return _buildProductoCard(context, ref, producto);
-                },
+              return Column(
+                children: [
+                  // Contador de productos
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Icon(Icons.inventory_2,
+                            color: Colors.grey[600], size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${listaProductos.length} productos ${busqueda.isEmpty ? 'disponibles' : 'encontrados'}',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (busqueda.isNotEmpty) ...[
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () => ref
+                                .read(busquedaProductoPOSProvider.notifier)
+                                .state = '',
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[100],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Ver todos',
+                                style: TextStyle(
+                                  color: Colors.orange[700],
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: listaProductos.length,
+                      itemBuilder: (context, index) {
+                        final producto = listaProductos[index];
+                        return _buildProductoCard(context, ref, producto);
+                      },
+                    ),
+                  ),
+                ],
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Cargando productos...'),
+                ],
+              ),
+            ),
             error: (error, _) => _buildEstadoError(error),
           ),
         ),
@@ -330,7 +405,7 @@ class PuntoVentaScreen extends ConsumerWidget {
     );
   }
 
-  // PRODUCTO CARD COMPLETAMENTE CORREGIDO
+  // PRODUCTO CARD
   Widget _buildProductoCard(
       BuildContext context, WidgetRef ref, Producto producto) {
     final stockBajo = producto.stockActual <= producto.stockMinimo;
@@ -363,8 +438,9 @@ class PuntoVentaScreen extends ConsumerWidget {
 
               const SizedBox(width: 16),
 
-              // Información del producto - EXPANDED
+              // Información del producto
               Expanded(
+                flex: 2, // Más espacio para el contenido
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -395,27 +471,27 @@ class PuntoVentaScreen extends ConsumerWidget {
 
                     const SizedBox(height: 8),
 
-                    // Chips de información - ROW CORREGIDO
-                    Row(
+                    // Chips de información - MEJORADO
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
                       children: [
                         // Categoría
-                        Flexible(
-                          child: Container(
-                            constraints: const BoxConstraints(maxWidth: 100),
-                            child: Chip(
-                              label: Text(
-                                producto.categoria,
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                              backgroundColor: Colors.blue[100],
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
+                        Container(
+                          constraints: const BoxConstraints(maxWidth: 100),
+                          child: Chip(
+                            label: Text(
+                              producto.categoria,
+                              style: const TextStyle(fontSize: 10),
                             ),
+                            backgroundColor: Colors.blue[100],
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                            side: BorderSide.none,
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
                           ),
                         ),
-
-                        const SizedBox(width: 8),
 
                         // Estado de stock
                         Container(
@@ -428,6 +504,13 @@ class PuntoVentaScreen extends ConsumerWidget {
                                     ? Colors.orange[100]
                                     : Colors.green[100],
                             borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: sinStock
+                                  ? Colors.red[300]!
+                                  : stockBajo
+                                      ? Colors.orange[300]!
+                                      : Colors.green[300]!,
+                            ),
                           ),
                           child: Text(
                             sinStock
@@ -452,23 +535,34 @@ class PuntoVentaScreen extends ConsumerWidget {
 
               const SizedBox(width: 12),
 
-              // Precio y botón - COLUMNA FIJA
-              SizedBox(
-                width: 120,
+              // Precio y botón
+              Container(
+                width: 120, // Ancho fijo generoso
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Precio
                     Container(
-                      constraints: const BoxConstraints(minHeight: 24),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: sinStock ? Colors.grey[100] : Colors.green[50],
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color:
+                              sinStock ? Colors.grey[300]! : Colors.green[200]!,
+                        ),
+                      ),
                       child: Text(
                         'Bs. ${producto.precioVenta.toStringAsFixed(2)}',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: sinStock ? Colors.grey : Colors.green[700],
-                              fontSize: 16,
-                            ),
-                        textAlign: TextAlign.end,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color:
+                              sinStock ? Colors.grey[600] : Colors.green[700],
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -476,26 +570,29 @@ class PuntoVentaScreen extends ConsumerWidget {
 
                     const SizedBox(height: 8),
 
-                    // Botón agregar
+                    // Botón agregar - MEJORADO
                     SizedBox(
                       width: double.infinity,
-                      height: 36,
+                      height: 32, // Altura fija más pequeña
                       child: ElevatedButton.icon(
                         onPressed: sinStock
                             ? null
                             : () => _agregarAlCarrito(ref, producto),
-                        icon: const Icon(Icons.add_shopping_cart, size: 16),
+                        icon: const Icon(Icons.add_shopping_cart, size: 14),
                         label: const Text(
                           'Agregar',
-                          style: TextStyle(fontSize: 12),
+                          style: TextStyle(fontSize: 11),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[600],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          backgroundColor:
+                              sinStock ? Colors.grey[300] : Colors.green[600],
+                          foregroundColor:
+                              sinStock ? Colors.grey[600] : Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
+                          elevation: sinStock ? 0 : 2,
                         ),
                       ),
                     ),
@@ -509,12 +606,12 @@ class PuntoVentaScreen extends ConsumerWidget {
     );
   }
 
-  // BOTTOM SHEET CORREGIDO
+  // BOTTOM SHEET
   Widget _buildCarritoBottomSheet(
       BuildContext context, WidgetRef ref, EstadoCarrito carrito) {
     return Container(
-      height: 120,
-      padding: const EdgeInsets.all(16),
+      height: 80, // Muy compacto
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -526,65 +623,76 @@ class PuntoVentaScreen extends ConsumerWidget {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          // Información del carrito
-          Row(
-            children: [
-              Icon(Icons.shopping_cart, color: Colors.green.shade600),
-              const SizedBox(width: 8),
-              Text(
-                '${carrito.totalItems} ${carrito.totalItems == 1 ? 'producto' : 'productos'}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const Spacer(),
-              Text(
-                'Bs. ${carrito.totalFinal.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green.shade700,
+          // Info compacta
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.green[100],
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              Icons.shopping_cart,
+              color: Colors.green[700],
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Información
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${carrito.totalItems} item${carrito.totalItems == 1 ? '' : 's'}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-            ],
+                Text(
+                  'Bs. ${carrito.totalFinal.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[700],
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          const SizedBox(height: 12),
-
-          // Botones de acción
-          Row(
+          // Botones apilados verticalmente
+          Column(
             children: [
-              // Botón ver carrito
-              Expanded(
+              SizedBox(
+                width: 100,
+                height: 28,
                 child: OutlinedButton(
                   onPressed: () => _mostrarCarritoCompleto(context, ref),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.green.shade600,
-                    side: BorderSide(color: Colors.green.shade600),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    foregroundColor: Colors.green[600],
+                    side: BorderSide(color: Colors.green[600]!),
+                    padding: EdgeInsets.zero,
                   ),
-                  child: const Text('Ver Carrito'),
+                  child: const Text('Ver', style: TextStyle(fontSize: 10)),
                 ),
               ),
-
-              const SizedBox(width: 12),
-
-              // Botón procesar venta
-              Expanded(
-                flex: 2,
-                child: ElevatedButton.icon(
+              const SizedBox(height: 4),
+              SizedBox(
+                width: 100,
+                height: 28,
+                child: ElevatedButton(
                   onPressed: () => _irAProcesarPago(context, ref),
-                  icon: const Icon(Icons.payment, size: 18),
-                  label: const Text('Procesar Venta'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade600,
+                    backgroundColor: Colors.green[600],
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    padding: EdgeInsets.zero,
                   ),
+                  child: const Text('Procesar', style: TextStyle(fontSize: 10)),
                 ),
               ),
             ],
@@ -672,7 +780,7 @@ class PuntoVentaScreen extends ConsumerWidget {
     );
   }
 
-  // MODAL DEL CARRITO COMPLETO CORREGIDO
+  // MODAL DEL CARRITO
   void _mostrarCarritoCompleto(BuildContext context, WidgetRef ref) {
     final carrito = ref.watch(carritoProvider);
 
@@ -809,7 +917,7 @@ class PuntoVentaScreen extends ConsumerWidget {
     );
   }
 
-  // ITEM DEL CARRITO CORREGIDO
+  // ITEM DEL CARRITO
   Widget _buildItemCarrito(
       BuildContext context, WidgetRef ref, ItemCarrito item) {
     return Card(
@@ -1123,198 +1231,400 @@ class _ProcesarPagoScreenState extends ConsumerState<ProcesarPagoScreen> {
         backgroundColor: Colors.green[600],
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Resumen de la venta
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Resumen de la Venta',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 16),
-                    ...carrito.items.map((item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '${item.cantidad}x ${item.producto.nombre}',
-                                  style: const TextStyle(fontSize: 14),
-                                ),
-                              ),
-                              Text(
-                                'Bs. ${item.subtotal.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )),
-                    const Divider(),
-                    _buildFilaResumen('Subtotal:',
-                        'Bs. ${carrito.subtotalSinDescuento.toStringAsFixed(2)}'),
-                    if (carrito.totalDescuentosItems > 0)
-                      _buildFilaResumen(
-                        'Descuentos items:',
-                        '-Bs. ${carrito.totalDescuentosItems.toStringAsFixed(2)}',
-                        color: Colors.red[600],
-                      ),
-                    if (carrito.descuentoGeneral > 0)
-                      _buildFilaResumen(
-                        'Descuento general:',
-                        '-Bs. ${carrito.descuentoGeneral.toStringAsFixed(2)}',
-                        color: Colors.red[600],
-                      ),
-                    const Divider(thickness: 2),
-                    _buildFilaResumen(
-                      'TOTAL A PAGAR:',
-                      'Bs. ${carrito.totalFinal.toStringAsFixed(2)}',
-                      isTotal: true,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Método de pago
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Método de Pago',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 16),
-                    ...MetodoPago.values
-                        .map((metodo) => RadioListTile<MetodoPago>(
-                              title: Row(
-                                children: [
-                                  Icon(_getIconoMetodoPago(metodo)),
-                                  const SizedBox(width: 8),
-                                  Text(metodo.displayName),
-                                ],
-                              ),
-                              value: metodo,
-                              groupValue: metodoPago,
-                              onChanged: (value) {
-                                ref
-                                    .read(
-                                        metodoPagoSeleccionadoProvider.notifier)
-                                    .state = value!;
-                              },
-                            )),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Información de ubicación
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Ubicación de la Venta',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    if (_latitud != null && _longitud != null)
-                      Text(
-                        'Lat: ${_latitud!.toStringAsFixed(6)}, Lng: ${_longitud!.toStringAsFixed(6)}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                          fontFamily: 'monospace',
-                        ),
-                      )
-                    else
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Resumen de la venta - RESPONSIVE
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
                         children: [
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
+                          Icon(Icons.receipt_long, color: Colors.green[600]),
                           const SizedBox(width: 8),
                           Text(
-                            'Obteniendo ubicación...',
-                            style: TextStyle(color: Colors.grey[600]),
+                            'Resumen de la Venta',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                         ],
                       ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'La Paz, Bolivia (Simulado)',
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
+                      const SizedBox(height: 16),
+
+                      // Items de la venta - MEJORADO
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: carrito.items
+                                .map((item) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 30,
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue[100],
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                '${item.cantidad}x',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.blue[700],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item.producto.nombre,
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                                Text(
+                                                  'Bs. ${item.precioUnitario.toStringAsFixed(2)} c/u',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
+                                            children: [
+                                              Text(
+                                                'Bs. ${item.subtotal.toStringAsFixed(2)}',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              if (item.descuentoItem > 0)
+                                                Text(
+                                                  '-Bs. ${item.descuentoItem.toStringAsFixed(2)}',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    color: Colors.red[600],
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ))
+                                .toList(),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
 
-            const SizedBox(height: 32),
-
-            // Botón de finalizar venta
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _procesando ? null : _finalizarVenta,
-                icon: _procesando
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.check_circle, size: 24),
-                label: Text(_procesando ? 'PROCESANDO...' : 'FINALIZAR VENTA'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green[600],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                      const Divider(),
+                      _buildFilaResumen('Subtotal:',
+                          'Bs. ${carrito.subtotalSinDescuento.toStringAsFixed(2)}'),
+                      if (carrito.totalDescuentosItems > 0)
+                        _buildFilaResumen(
+                          'Descuentos items:',
+                          '-Bs. ${carrito.totalDescuentosItems.toStringAsFixed(2)}',
+                          color: Colors.red[600],
+                        ),
+                      if (carrito.descuentoGeneral > 0)
+                        _buildFilaResumen(
+                          'Descuento general:',
+                          '-Bs. ${carrito.descuentoGeneral.toStringAsFixed(2)}',
+                          color: Colors.red[600],
+                        ),
+                      const Divider(thickness: 2),
+                      _buildFilaResumen(
+                        'TOTAL A PAGAR:',
+                        'Bs. ${carrito.totalFinal.toStringAsFixed(2)}',
+                        isTotal: true,
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 16),
+
+              // Método de pago - MEJORADO
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.payment, color: Colors.blue[600]),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Método de Pago',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // RESPONSIVE PARA MÉTODOS DE PAGO
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          if (constraints.maxWidth < 400) {
+                            // Layout vertical para pantallas pequeñas
+                            return Column(
+                              children: MetodoPago.values
+                                  .map((metodo) => Container(
+                                        margin:
+                                            const EdgeInsets.only(bottom: 8),
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: metodoPago == metodo
+                                                ? Colors.green[300]!
+                                                : Colors.grey[300]!,
+                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          color: metodoPago == metodo
+                                              ? Colors.green[50]
+                                              : null,
+                                        ),
+                                        child: RadioListTile<MetodoPago>(
+                                          title: Row(
+                                            children: [
+                                              Icon(
+                                                _getIconoMetodoPago(metodo),
+                                                color: metodoPago == metodo
+                                                    ? Colors.green[600]
+                                                    : Colors.grey[600],
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(metodo.displayName),
+                                            ],
+                                          ),
+                                          value: metodo,
+                                          groupValue: metodoPago,
+                                          onChanged: (value) {
+                                            ref
+                                                .read(
+                                                    metodoPagoSeleccionadoProvider
+                                                        .notifier)
+                                                .state = value!;
+                                          },
+                                          activeColor: Colors.green[600],
+                                        ),
+                                      ))
+                                  .toList(),
+                            );
+                          } else {
+                            // Layout en grid para pantallas grandes
+                            return GridView.count(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              crossAxisCount: 2,
+                              childAspectRatio: 3,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
+                              children: MetodoPago.values
+                                  .map((metodo) => Container(
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: metodoPago == metodo
+                                                ? Colors.green[300]!
+                                                : Colors.grey[300]!,
+                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          color: metodoPago == metodo
+                                              ? Colors.green[50]
+                                              : null,
+                                        ),
+                                        child: RadioListTile<MetodoPago>(
+                                          title: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                _getIconoMetodoPago(metodo),
+                                                size: 16,
+                                                color: metodoPago == metodo
+                                                    ? Colors.green[600]
+                                                    : Colors.grey[600],
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Flexible(
+                                                child: Text(
+                                                  metodo.displayName,
+                                                  style: const TextStyle(
+                                                      fontSize: 12),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          value: metodo,
+                                          groupValue: metodoPago,
+                                          onChanged: (value) {
+                                            ref
+                                                .read(
+                                                    metodoPagoSeleccionadoProvider
+                                                        .notifier)
+                                                .state = value!;
+                                          },
+                                          activeColor: Colors.green[600],
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 8),
+                                        ),
+                                      ))
+                                  .toList(),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Información de ubicación - COMPACTA
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.location_on,
+                          color: Colors.blue[600],
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Ubicación de la Venta',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            if (_latitud != null && _longitud != null)
+                              Text(
+                                'La Paz, Bolivia',
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                ),
+                              )
+                            else
+                              Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Obteniendo ubicación...',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Botón de finalizar venta - RESPONSIVE
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _procesando ? null : _finalizarVenta,
+                  icon: _procesando
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.check_circle, size: 24),
+                  label:
+                      Text(_procesando ? 'PROCESANDO...' : 'FINALIZAR VENTA'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[600],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Espacio extra para navegación
+              const SizedBox(height: 100),
+            ],
+          ),
         ),
       ),
     );

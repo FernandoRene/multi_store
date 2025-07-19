@@ -11,7 +11,7 @@ import '../repositories/database_repositories.dart';
 
 class SupabaseConfig {
   // CONFIGURACIÓN SEGURA DE CREDENCIALES
-  // Para desarrollo (cambiar por tus credenciales)
+  // Credenciales de DB Supabase
   static const String _supabaseUrlDev =
       'https://dnbzxnvvapgsxbyhyrfu.supabase.co';
   static const String _supabaseAnonKeyDev =
@@ -280,10 +280,9 @@ class SincronizacionService {
         };
 
         if (SupabaseConfig.modoDemo) {
-          // Modo demo - solo simular
           print('📦 [DEMO] Sincronizando producto: ${producto.nombre}');
         } else {
-          // Modo real - sincronizar con Supabase
+          // Modo real
           try {
             print('📦 Sincronizando producto: ${producto.nombre}');
             await _supabase!.from('productos').upsert(datosProducto);
@@ -781,9 +780,9 @@ class SincronizacionScreen extends ConsumerWidget {
                 Icon(
                   _getIconoEstado(estado.estado),
                   color: _getColorEstado(estado.estado),
-                  size: 24,
+                  size: 18,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 7),
                 Text(
                   'Estado de Sincronización',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -793,10 +792,10 @@ class SincronizacionScreen extends ConsumerWidget {
                 const Spacer(),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                   decoration: BoxDecoration(
                     color: _getColorEstado(estado.estado).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(7),
                     border: Border.all(
                       color: _getColorEstado(estado.estado).withOpacity(0.3),
                     ),
@@ -806,13 +805,13 @@ class SincronizacionScreen extends ConsumerWidget {
                     style: TextStyle(
                       color: _getColorEstado(estado.estado),
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontSize: 7,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             if (estado.mensaje != null)
               Text(
                 estado.mensaje!,
@@ -1099,7 +1098,7 @@ class SincronizacionScreen extends ConsumerWidget {
                     label: const Text('Productos'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: estaSincronizando
@@ -1114,7 +1113,7 @@ class SincronizacionScreen extends ConsumerWidget {
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
             // Limpiar estado
             TextButton.icon(
@@ -1145,6 +1144,8 @@ class SincronizacionScreen extends ConsumerWidget {
                   ),
             ),
             const SizedBox(height: 16),
+
+            // SUPABASE - FUNCIONAL
             ListTile(
               leading: const Icon(Icons.settings_backup_restore),
               title: const Text('Configurar Supabase'),
@@ -1152,28 +1153,7 @@ class SincronizacionScreen extends ConsumerWidget {
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () => _mostrarConfiguracionSupabase(context),
             ),
-            ListTile(
-              leading: const Icon(Icons.schedule),
-              title: const Text('Sincronización Automática'),
-              subtitle: const Text('Configurar intervalos de sync'),
-              trailing: Switch(
-                value: true, // Placeholder
-                onChanged: (value) {
-                  // Implementar toggle de sync automático
-                },
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.network_check),
-              title: const Text('Solo WiFi'),
-              subtitle: const Text('Sincronizar solo con WiFi'),
-              trailing: Switch(
-                value: false, // Placeholder
-                onChanged: (value) {
-                  // Implementar toggle de solo WiFi
-                },
-              ),
-            ),
+            // LIMPIAR CACHE - FUNCIONAL
             ListTile(
               leading: const Icon(Icons.delete_sweep),
               title: const Text('Limpiar Cache'),
@@ -1181,8 +1161,243 @@ class SincronizacionScreen extends ConsumerWidget {
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () => _mostrarDialogoLimpiarCache(context),
             ),
+            // SINCRONIZACIÓN AUTOMÁTICA
+            Opacity(
+              opacity: 0.5,
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: Icon(
+                  Icons.schedule,
+                  color: Colors.grey[400],
+                ),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // TÍTULO Y CHIP EN COLUMN PARA EVITAR OVERFLOW
+                    const Text(
+                      'Sincronización Automática',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    // CHIP SEPARADO EN SU PROPIA LÍNEA
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[100],
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.orange[300]!),
+                        ),
+                        child: Text(
+                          'PRÓXIMAMENTE',
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: const Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Configurar intervalos de sync',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                trailing: SizedBox(
+                  width: 50, // Ancho fijo para el switch
+                  child: Switch(
+                    value: false,
+                    onChanged: null,
+                  ),
+                ),
+                onTap: () => _mostrarDialogoFuncionNoDisponible(
+                  context,
+                  'Sincronización Automática',
+                  'Esta función estará disponible en una próxima actualización.',
+                ),
+              ),
+            ),
+
+            // SOLO WIFI
+            Opacity(
+              opacity: 0.5,
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: Icon(
+                  Icons.network_check,
+                  color: Colors.grey[400],
+                ),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // TÍTULO Y CHIP EN COLUMN PARA EVITAR OVERFLOW
+                    const Text(
+                      'Solo WiFi',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    // CHIP SEPARADO EN SU PROPIA LÍNEA
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[100],
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.orange[300]!),
+                        ),
+                        child: Text(
+                          'PRÓXIMAMENTE',
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: const Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Sincronizar solo con WiFi',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                trailing: SizedBox(
+                  width: 50, // Ancho fijo para el switch
+                  child: Switch(
+                    value: false,
+                    onChanged: null,
+                  ),
+                ),
+                onTap: () => _mostrarDialogoFuncionNoDisponible(
+                  context,
+                  'Solo WiFi',
+                  'Esta función estará disponible en una próxima actualización. '
+                      'Permitirá limitar la sincronización solo cuando esté conectado a WiFi.',
+                ),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+// MÉTODO PARA MOSTRAR DIÁLOGO DE FUNCIÓN NO DISPONIBLE
+  void _mostrarDialogoFuncionNoDisponible(
+    BuildContext context,
+    String nombreFuncion,
+    String descripcion,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.construction, color: Colors.orange[600]),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                nombreFuncion,
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, color: Colors.orange[600], size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Función en desarrollo',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(descripcion),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb, color: Colors.blue[600], size: 16),
+                  const SizedBox(width: 6),
+                  const Expanded(
+                    child: Text(
+                      'Mientras tanto, puedes usar la sincronización manual.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Entendido'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Ir a sincronización manual
+              Navigator.of(context).pushNamed('/sincronizacion');
+            },
+            icon: const Icon(Icons.sync, size: 16),
+            label: const Text('Sincronizar Ahora'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal[600],
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }

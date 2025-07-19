@@ -1,9 +1,26 @@
+// android/app/build.gradle.kts
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+import java.io.FileInputStream
+import java.util.Properties
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties") // Usa comillas dobles ""
+
+if (localPropertiesFile.exists()) {
+    FileInputStream(localPropertiesFile).use { input -> // Usa FileInputStream y use block
+        localProperties.load(input)
+    }
+}
+
+// Convertir a String explícitamente y usar Elvis operator para valores por defecto
+val flutterVersionCode: String = localProperties.getProperty("flutter.versionCode") ?: "1"
+val flutterVersionName: String = localProperties.getProperty("flutter.versionName") ?: "1.0"
+
 
 android {
     namespace = "com.example.inventario_multitienda"
@@ -18,7 +35,7 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
-
+    
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.inventario_multitienda"
@@ -26,8 +43,12 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
+        versionCode = flutterVersionCode.toInt()
         versionName = flutter.versionName
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

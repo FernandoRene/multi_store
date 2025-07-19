@@ -1,5 +1,5 @@
 name: inventario_multitienda
-description: Sistema de Gestión de Inventario Multi-tienda con Geolocalización
+description: Sistema de Gestión de Inventario Multi-tienda con Geolocalización, Gráficos y Sincronización
 
 publish_to: 'none'
 
@@ -12,31 +12,95 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # State Management
+  # ===== STATE MANAGEMENT =====
   flutter_riverpod: ^2.4.9
   
-  # Database - CONFIGURADO PARA MÓVILES
+  # ===== DATABASE =====
   drift: ^2.14.1
   sqlite3_flutter_libs: ^0.5.34
   
-  # Utilities
+  # ===== CLOUD & SYNC =====
+  supabase_flutter: ^2.3.4
+  
+  # ===== NETWORKING =====
+  http: ^1.1.0
+  dio: ^5.3.2
+  connectivity_plus: ^5.0.2
+  
+  # ===== MAPS & LOCATION =====
+  flutter_map: ^6.1.0
+  latlong2: 0.9.0
+  geolocator: ^10.1.0
+  geocoding: ^2.1.1
+  
+  # QR Scanner 
+  mobile_scanner: ^7.0.1
+
+  # ===== CHARTS =====
+  fl_chart: ^0.66.2
+  
+  # ===== UI & ANIMATIONS =====
+  animations: ^2.0.8
+  lottie: ^2.7.0
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  
+  # ===== UTILITIES =====
   json_annotation: ^4.9.0
   intl: ^0.18.0
   path_provider: ^2.1.5
-
-  # Icons
+  shared_preferences: ^2.2.2
+  device_info_plus: ^9.1.1
+  package_info_plus: ^4.2.0
+  
+  # ===== SENSORS & HARDWARE =====
+  sensors_plus: ^4.0.2
+  battery_plus: ^5.0.1
+  
+  # ===== FILE HANDLING =====
+  # file_picker: ^6.1.1
+  permission_handler: ^11.1.1
+  path: ^1.8.3
+  
+  # ===== QR & BARCODE =====
+  barcode_widget: ^2.0.3
+  
+  # ===== PRINTING & SHARING =====
+  printing: ^5.11.0
+  pdf: ^3.10.7
+  share_plus: ^7.2.1
+  
+  # ===== SECURITY =====
+  flutter_secure_storage: ^9.0.0
+  crypto: ^3.0.3
+  
+  # ===== ICONS =====
   cupertino_icons: ^1.0.2
-  supabase_flutter: ^2.5.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
   
-  # Code Generation
+  # ===== CODE GENERATION =====
   drift_dev: ^2.14.1
   build_runner: ^2.4.7
   json_serializable: ^6.7.1
 
 flutter:
   uses-material-design: true
+  
+  # ===== ASSETS =====
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
+  #   - assets/animations/
+  #   - assets/maps/
+  
+  # ===== FONTS =====
+  # fonts:
+  #   - family: Roboto
+  #     fonts:
+  #       - asset: fonts/Roboto-Regular.ttf
+  #       - asset: fonts/Roboto-Bold.ttf
+  #         weight: 700

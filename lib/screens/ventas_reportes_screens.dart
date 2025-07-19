@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math' as math;
-import '../database/database.dart';
 import '../models/database_models.dart';
 import '../repositories/database_repositories.dart';
 
@@ -274,7 +273,7 @@ class VentasScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // Resumen rápido corregido
+          // Resumen rápido
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.blue.shade50,
@@ -487,7 +486,7 @@ class VentasScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header de la venta - ROW CORREGIDO
+              // Header de la venta
               Row(
                 children: [
                   // Chip de ID de venta
@@ -524,7 +523,7 @@ class VentasScreen extends ConsumerWidget {
 
               const SizedBox(height: 12),
 
-              // Información básica - ROWS CORREGIDOS
+              // Información básica
               Row(
                 children: [
                   // Fecha y hora
@@ -570,7 +569,7 @@ class VentasScreen extends ConsumerWidget {
 
               const SizedBox(height: 8),
 
-              // Información adicional - ROW CORREGIDO
+              // Información adicional
               Row(
                 children: [
                   // Número de productos
@@ -801,7 +800,7 @@ class ReportesScreen extends ConsumerWidget {
               ),
         ),
         const SizedBox(height: 16),
-        // Grid corregido para métricas
+        // Grid para métricas
         LayoutBuilder(
           builder: (context, constraints) {
             final crossAxisCount = constraints.maxWidth < 600 ? 2 : 4;
@@ -947,7 +946,6 @@ class ReportesScreen extends ConsumerWidget {
                   ),
             ),
             const SizedBox(height: 14),
-            // Gráfico simple corregido
             SizedBox(
               height: 200,
               child: _buildGraficoBarras(datos.ventasPorDia),

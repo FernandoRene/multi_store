@@ -69,7 +69,7 @@ class ProductosScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // Barra de búsqueda - CORREGIDA
+          // Barra de búsqueda
           Container(
             padding: const EdgeInsets.all(16),
             color: Theme.of(context).colorScheme.surface,
@@ -103,7 +103,7 @@ class ProductosScreen extends ConsumerWidget {
                   },
                 ),
                 const SizedBox(height: 12),
-                // Filtro de categorías - CORREGIDO
+                // Filtro de categorías
                 categorias.when(
                   data: (listaCategorias) => _buildFiltroCategoria(
                       listaCategorias, categoriaSeleccionada, ref),
@@ -218,12 +218,13 @@ class ProductosScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ROW PRINCIPAL
+              // ROW PRINCIPAL - LAYOUT MEJORADO
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Información del producto - USA EXPANDED
+                  // Información del producto
                   Expanded(
+                    flex: 3, // Dar más espacio al contenido
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -242,12 +243,10 @@ class ProductosScreen extends ConsumerWidget {
                           const SizedBox(height: 4),
                           Text(
                             producto.descripcion!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -255,133 +254,156 @@ class ProductosScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  // Precio y menú - DIMENSIONES FIJAS
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Precio
-                      Container(
-                        constraints: const BoxConstraints(minWidth: 80),
-                        child: Text(
-                          'Bs. ${producto.precioVenta.toStringAsFixed(2)}',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: sinStock
-                                        ? Colors.grey
-                                        : Theme.of(context).colorScheme.primary,
-                                  ),
-                          textAlign: TextAlign.end,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+
+                  const SizedBox(width: 16),
+
+                  // Precio y menu
+                  SizedBox(
+                    width: 100, // Ancho fijo más generoso
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Precio
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                sinStock ? Colors.grey[100] : Colors.green[50],
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: sinStock
+                                  ? Colors.grey[300]!
+                                  : Colors.green[200]!,
+                            ),
+                          ),
+                          child: Text(
+                            'Bs. ${producto.precioVenta.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: sinStock
+                                  ? Colors.grey[600]
+                                  : Colors.green[700],
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                      // Menú de opciones
-                      SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: PopupMenuButton<String>(
-                          onSelected: (value) => _onMenuItemSelected(
-                              context, ref, value, producto),
-                          icon: const Icon(Icons.more_vert, size: 20),
-                          padding: EdgeInsets.zero,
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'ver',
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.visibility, size: 16),
-                                  SizedBox(width: 8),
-                                  Text('Ver', style: TextStyle(fontSize: 14)),
-                                ],
-                              ),
+
+                        const SizedBox(height: 8),
+
+                        // Menú de opciones
+                        SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: PopupMenuButton<String>(
+                            onSelected: (value) => _onMenuItemSelected(
+                                context, ref, value, producto),
+                            icon: Icon(
+                              Icons.more_vert,
+                              size: 20,
+                              color: Colors.grey[600],
                             ),
-                            const PopupMenuItem(
-                              value: 'editar',
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.edit, size: 16),
-                                  SizedBox(width: 8),
-                                  Text('Editar',
-                                      style: TextStyle(fontSize: 14)),
-                                ],
-                              ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
                             ),
-                            const PopupMenuItem(
-                              value: 'eliminar',
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.delete,
-                                      color: Colors.red, size: 16),
-                                  SizedBox(width: 8),
-                                  Text('Eliminar',
-                                      style: TextStyle(
-                                          color: Colors.red, fontSize: 14)),
-                                ],
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'ver',
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.visibility, size: 16),
+                                    SizedBox(width: 8),
+                                    Text('Ver'),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                              const PopupMenuItem(
+                                value: 'editar',
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.edit, size: 16),
+                                    SizedBox(width: 8),
+                                    Text('Editar'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'eliminar',
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.delete,
+                                        color: Colors.red, size: 16),
+                                    SizedBox(width: 8),
+                                    Text('Eliminar',
+                                        style: TextStyle(color: Colors.red)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
 
               const SizedBox(height: 12),
 
-              // CHIPS Y ESTADO CORREGIDOS
-              Row(
+              // CHIPS Y ESTADO - LAYOUT MEJORADO
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
                 children: [
-                  // Categoría - TAMAÑO FLEXIBLE
-                  Flexible(
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 120),
-                      child: Chip(
-                        label: Text(
-                          producto.categoria,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        backgroundColor:
-                            Theme.of(context).colorScheme.secondaryContainer,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
+                  // Categoría
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 140),
+                    child: Chip(
+                      label: Text(
+                        producto.categoria,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11),
                       ),
+                      backgroundColor: Colors.blue[100],
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                      side: BorderSide.none,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                   ),
 
                   // Código de barras (si existe)
-                  if (producto.codigoBarras?.isNotEmpty == true) ...[
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Container(
-                        constraints: const BoxConstraints(maxWidth: 100),
-                        child: Chip(
-                          label: Text(
-                            producto.codigoBarras!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 10),
-                          ),
-                          backgroundColor: Colors.grey[200],
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
+                  if (producto.codigoBarras?.isNotEmpty == true)
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 120),
+                      child: Chip(
+                        label: Text(
+                          producto.codigoBarras!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 10),
                         ),
+                        backgroundColor: Colors.grey[200],
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        side: BorderSide.none,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                       ),
                     ),
-                  ],
 
-                  const Spacer(),
-
-                  // Indicador de stock - TAMAÑO FIJO
+                  // Indicador de stock - MEJORADO
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -392,6 +414,13 @@ class ProductosScreen extends ConsumerWidget {
                               ? Colors.orange[100]
                               : Colors.green[100],
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: sinStock
+                            ? Colors.red[300]!
+                            : stockBajo
+                                ? Colors.orange[300]!
+                                : Colors.green[300]!,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -423,8 +452,6 @@ class ProductosScreen extends ConsumerWidget {
                             fontWeight: FontWeight.bold,
                             fontSize: 11,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -856,12 +883,13 @@ class _AgregarProductoScreenState extends ConsumerState<AgregarProductoScreen> {
                         child: Row(
                           children: [
                             Icon(Icons.info, color: Colors.blue[700]),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Text(
                               'Margen de ganancia: ${_calcularMargenTexto()}',
                               style: TextStyle(
                                 color: Colors.blue[700],
                                 fontWeight: FontWeight.w500,
+                                fontSize: 11,
                               ),
                             ),
                           ],
@@ -1837,9 +1865,14 @@ class DetalleProductoScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(producto.nombre),
+        title: Text(
+          producto.nombre,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          // BOTONES DE ACCIÓN
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
@@ -1850,10 +1883,12 @@ class DetalleProductoScreen extends ConsumerWidget {
                 ),
               );
             },
+            tooltip: 'Editar producto',
           ),
           PopupMenuButton<String>(
             onSelected: (value) =>
                 _onMenuItemSelected(context, ref, value, producto),
+            icon: const Icon(Icons.more_vert),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'editar',
@@ -1918,16 +1953,23 @@ class DetalleProductoScreen extends ConsumerWidget {
                                     ?.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               if (producto.descripcion != null)
-                                Text(
-                                  producto.descripcion!,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: Colors.grey[600],
-                                      ),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    producto.descripcion!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Colors.grey[600],
+                                        ),
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                             ],
                           ),
@@ -1935,20 +1977,22 @@ class DetalleProductoScreen extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Row(
+
+                    // CHIPS MEJORADOS
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         Chip(
                           label: Text(producto.categoria),
                           backgroundColor:
                               Theme.of(context).colorScheme.secondaryContainer,
                         ),
-                        const SizedBox(width: 8),
                         if (producto.codigoBarras != null)
                           Chip(
                             label: Text(producto.codigoBarras!),
                             backgroundColor: Colors.grey[200],
                           ),
-                        const Spacer(),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
@@ -1956,7 +2000,7 @@ class DetalleProductoScreen extends ConsumerWidget {
                             color: producto.activo
                                 ? Colors.green[100]
                                 : Colors.red[100],
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             producto.activo ? 'ACTIVO' : 'INACTIVO',
@@ -1978,10 +2022,10 @@ class DetalleProductoScreen extends ConsumerWidget {
 
             const SizedBox(height: 16),
 
-            // Precios
+            // Precios - RESPONSIVE
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1991,31 +2035,62 @@ class DetalleProductoScreen extends ConsumerWidget {
                             fontWeight: FontWeight.bold,
                           ),
                     ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildInfoCard(
-                            'Precio de Compra',
-                            'Bs. ${producto.precioCompra.toStringAsFixed(2)}',
-                            Icons.money_off,
-                            Colors.orange,
-                            context,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: _buildInfoCard(
-                            'Precio de Venta',
-                            'Bs. ${producto.precioVenta.toStringAsFixed(2)}',
-                            Icons.attach_money,
-                            Colors.green,
-                            context,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+
+                    // LAYOUT RESPONSIVE PARA PRECIOS
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth < 400) {
+                          // Layout vertical para pantallas pequeñas
+                          return Column(
+                            children: [
+                              _buildInfoCard(
+                                'Precio de Compra',
+                                'Bs. ${producto.precioCompra.toStringAsFixed(2)}',
+                                Icons.money_off,
+                                Colors.orange,
+                                context,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildInfoCard(
+                                'Precio de Venta',
+                                'Bs. ${producto.precioVenta.toStringAsFixed(2)}',
+                                Icons.attach_money,
+                                Colors.green,
+                                context,
+                              ),
+                            ],
+                          );
+                        } else {
+                          // Layout horizontal para pantallas grandes
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: _buildInfoCard(
+                                  'Precio de Compra',
+                                  'Bs. ${producto.precioCompra.toStringAsFixed(2)}',
+                                  Icons.money_off,
+                                  Colors.orange,
+                                  context,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildInfoCard(
+                                  'Precio de Venta',
+                                  'Bs. ${producto.precioVenta.toStringAsFixed(2)}',
+                                  Icons.attach_money,
+                                  Colors.green,
+                                  context,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                      },
                     ),
-                    const SizedBox(height: 14),
+
+                    const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -2061,10 +2136,10 @@ class DetalleProductoScreen extends ConsumerWidget {
 
             const SizedBox(height: 16),
 
-            // Inventario
+            // Inventario - RESPONSIVE
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -2074,31 +2149,60 @@ class DetalleProductoScreen extends ConsumerWidget {
                             fontWeight: FontWeight.bold,
                           ),
                     ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildInfoCard(
-                            'Stock Actual',
-                            '${producto.stockActual} ${producto.unidadMedida}',
-                            Icons.inventory,
-                            stockBajo ? Colors.red : Colors.green,
-                            context,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: _buildInfoCard(
-                            'Stock Mínimo',
-                            '${producto.stockMinimo} ${producto.unidadMedida}',
-                            Icons.warning,
-                            Colors.orange,
-                            context,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+
+                    // LAYOUT RESPONSIVE PARA INVENTARIO
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth < 400) {
+                          return Column(
+                            children: [
+                              _buildInfoCard(
+                                'Stock Actual',
+                                '${producto.stockActual} ${producto.unidadMedida}',
+                                Icons.inventory,
+                                stockBajo ? Colors.red : Colors.green,
+                                context,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildInfoCard(
+                                'Stock Mínimo',
+                                '${producto.stockMinimo} ${producto.unidadMedida}',
+                                Icons.warning,
+                                Colors.orange,
+                                context,
+                              ),
+                            ],
+                          );
+                        } else {
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: _buildInfoCard(
+                                  'Stock Actual',
+                                  '${producto.stockActual} ${producto.unidadMedida}',
+                                  Icons.inventory,
+                                  stockBajo ? Colors.red : Colors.green,
+                                  context,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildInfoCard(
+                                  'Stock Mínimo',
+                                  '${producto.stockMinimo} ${producto.unidadMedida}',
+                                  Icons.warning,
+                                  Colors.orange,
+                                  context,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                      },
                     ),
-                    const SizedBox(height: 14),
+
+                    const SizedBox(height: 16),
                     if (stockBajo)
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -2132,7 +2236,7 @@ class DetalleProductoScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     _buildInfoRow('Valor en Inventario',
                         'Bs. ${(producto.stockActual * producto.precioCompra).toStringAsFixed(2)}'),
                     _buildInfoRow('Unidad de Medida', producto.unidadMedida),
@@ -2169,9 +2273,13 @@ class DetalleProductoScreen extends ConsumerWidget {
                 ),
               ),
             ),
+
+            // Espacio extra para el FAB
+            const SizedBox(height: 80),
           ],
         ),
       ),
+      // FAB
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.of(context).push(
@@ -2182,10 +2290,13 @@ class DetalleProductoScreen extends ConsumerWidget {
         },
         icon: const Icon(Icons.edit),
         label: const Text('Editar'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
     );
   }
 
+  // Métodos auxiliares sin cambios
   Widget _buildInfoCard(String title, String value, IconData icon, Color color,
       BuildContext context) {
     return Container(
@@ -2202,12 +2313,16 @@ class DetalleProductoScreen extends ConsumerWidget {
             children: [
               Icon(icon, color: color, size: 20),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 12,
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -2219,6 +2334,8 @@ class DetalleProductoScreen extends ConsumerWidget {
                   color: color,
                   fontWeight: FontWeight.bold,
                 ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -2245,6 +2362,8 @@ class DetalleProductoScreen extends ConsumerWidget {
             child: Text(
               value,
               style: const TextStyle(fontWeight: FontWeight.w500),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -2255,13 +2374,6 @@ class DetalleProductoScreen extends ConsumerWidget {
   void _onMenuItemSelected(
       BuildContext context, WidgetRef ref, String value, Producto producto) {
     switch (value) {
-      case 'ver':
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => DetalleProductoScreen(producto: producto),
-          ),
-        );
-        break;
       case 'editar':
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -2301,6 +2413,8 @@ class DetalleProductoScreen extends ConsumerWidget {
               if (context.mounted) {
                 if (success) {
                   ref.refresh(productosFilteredProvider);
+                  Navigator.of(context)
+                      .pop(); // Salir de la pantalla de detalle
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Producto eliminado exitosamente'),

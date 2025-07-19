@@ -22,7 +22,8 @@ class Productos extends Table {
   IntColumn get stockActual => integer()();
   IntColumn get stockMinimo => integer()();
   TextColumn get unidadMedida => text().withDefault(const Constant('unidad'))();
-  DateTimeColumn get fechaCreacion => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get fechaCreacion =>
+      dateTime().withDefault(currentDateAndTime)();
   BoolColumn get activo => boolean().withDefault(const Constant(true))();
   TextColumn get tiendaId => text()();
 }
@@ -40,7 +41,8 @@ class Ventas extends Table {
   RealColumn get longitud => real().nullable()();
   TextColumn get direccionAproximada => text().nullable()();
   TextColumn get zonaGeografica => text().nullable()();
-  BoolColumn get sincronizadoNube => boolean().withDefault(const Constant(false))();
+  BoolColumn get sincronizadoNube =>
+      boolean().withDefault(const Constant(false))();
   DateTimeColumn get fechaSincronizacion => dateTime().nullable()();
   TextColumn get tiendaId => text()();
 }
@@ -54,11 +56,11 @@ class DetalleVentas extends Table {
   RealColumn get precioUnitario => real()();
   RealColumn get subtotal => real()();
   RealColumn get descuentoItem => real().withDefault(const Constant(0))();
-  
+
   @override
   List<Set<Column>> get uniqueKeys => [
-    {ventaId, productoId},
-  ];
+        {ventaId, productoId},
+      ];
 }
 
 @DataClassName('UsuarioTienda')
@@ -70,13 +72,14 @@ class UsuariosTienda extends Table {
   TextColumn get rol => text()();
   TextColumn get tiendaId => text()();
   BoolColumn get activo => boolean().withDefault(const Constant(true))();
-  DateTimeColumn get fechaCreacion => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get fechaCreacion =>
+      dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get fechaUltimoAcceso => dateTime().nullable()();
-  
+
   @override
   List<Set<Column>> get uniqueKeys => [
-    {email},
-  ];
+        {email},
+      ];
 }
 
 @DataClassName('MovimientoInventario')
@@ -88,9 +91,11 @@ class MovimientosInventario extends Table {
   RealColumn get precioUnitario => real().nullable()();
   TextColumn get motivo => text().nullable()();
   TextColumn get referenciaDocumento => text().nullable()();
-  DateTimeColumn get fechaMovimiento => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get fechaMovimiento =>
+      dateTime().withDefault(currentDateAndTime)();
   TextColumn get usuarioId => text()();
-  BoolColumn get sincronizadoNube => boolean().withDefault(const Constant(false))();
+  BoolColumn get sincronizadoNube =>
+      boolean().withDefault(const Constant(false))();
 }
 
 @DataClassName('ConfiguracionLocal')
@@ -99,12 +104,13 @@ class ConfiguracionesLocales extends Table {
   TextColumn get clave => text()();
   TextColumn get valor => text()();
   TextColumn get descripcion => text().nullable()();
-  DateTimeColumn get fechaActualizacion => dateTime().withDefault(currentDateAndTime)();
-  
+  DateTimeColumn get fechaActualizacion =>
+      dateTime().withDefault(currentDateAndTime)();
+
   @override
   List<Set<Column>> get uniqueKeys => [
-    {clave},
-  ];
+        {clave},
+      ];
 }
 
 // ===== BASE DE DATOS CON MEJOR MANEJO DE ERRORES =====
@@ -130,7 +136,7 @@ class AppDatabase extends _$AppDatabase {
         print('📊 Creando tablas de la base de datos...');
         await m.createAll();
         print('✅ Tablas creadas exitosamente');
-        
+
         print('📝 Insertando datos iniciales...');
         await _insertInitialData();
         print('✅ Datos iniciales insertados');
@@ -169,7 +175,7 @@ class AppDatabase extends _$AppDatabase {
           descripcion: const Value('Moneda local'),
         ),
       ];
-      
+
       for (final config in configuraciones) {
         await into(configuracionesLocales).insert(config);
       }
@@ -185,40 +191,6 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
       print('✅ Usuario administrador creado');
-
-      print('📦 Insertando productos de ejemplo...');
-      final productosDemo = [
-        ProductosCompanion.insert(
-          codigoBarras: const Value('7501234567890'),
-          nombre: 'Producto Demo 1',
-          descripcion: const Value('Producto de demostración'),
-          categoria: 'Electrónicos',
-          precioVenta: 150.0,
-          precioCompra: 100.0,
-          margenGanancia: const Value(50.0),
-          stockActual: 50,
-          stockMinimo: 10,
-          tiendaId: 'tienda_001',
-        ),
-        ProductosCompanion.insert(
-          codigoBarras: const Value('7501234567891'),
-          nombre: 'Producto Demo 2',
-          descripcion: const Value('Otro producto de demostración'),
-          categoria: 'Hogar',
-          precioVenta: 75.0,
-          precioCompra: 50.0,
-          margenGanancia: const Value(25.0),
-          stockActual: 30,
-          stockMinimo: 5,
-          tiendaId: 'tienda_001',
-        ),
-      ];
-      
-      for (final producto in productosDemo) {
-        await into(productos).insert(producto);
-      }
-      print('✅ Productos de ejemplo insertados');
-      
     } catch (e, stack) {
       print('🚨 Error al insertar datos iniciales: $e');
       print('📍 Stack trace: $stack');
@@ -233,7 +205,7 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     try {
       print('🚀 Inicializando conexión a la base de datos...');
-      
+
       // Inicializar SQLite3 para móviles
       print('🔧 Configurando SQLite3 para Android...');
       await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
@@ -243,7 +215,7 @@ LazyDatabase _openConnection() {
       print('📂 Obteniendo directorio de la aplicación...');
       final dbFolder = await getApplicationDocumentsDirectory();
       final file = File(p.join(dbFolder.path, 'inventario_multitienda.db'));
-      
+
       print('📄 Archivo de base de datos: ${file.path}');
       print('📊 ¿Base de datos existe?: ${file.existsSync()}');
 
@@ -253,7 +225,7 @@ LazyDatabase _openConnection() {
         file,
         setup: (database) {
           print('⚙️  Configurando SQLite...');
-          
+
           try {
             // Configuraciones básicas y seguras
             database.execute('PRAGMA foreign_keys = ON');
@@ -266,10 +238,9 @@ LazyDatabase _openConnection() {
           }
         },
       );
-      
+
       print('✅ Base de datos inicializada exitosamente');
       return database;
-      
     } catch (e, stack) {
       print('🚨 Error fatal al inicializar base de datos: $e');
       print('📍 Stack trace: $stack');
