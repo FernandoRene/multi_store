@@ -49,3 +49,27 @@ lib/config/supabase_config.dart
 .env
 .env.local
 .env.production
+
+# Flutter builds
+build/
+.dart_tool/
+.flutter-plugins-dependencies
+
+# Android
+android/.gradle/
+android/app/build/
+android/captures/
+android/gradle.properties.example
+
+# iOS
+ios/build/
+ios/Runner.xcworkspace/xcuserdata/
+ios/Flutter/flutter_assets/
+
+# Web
+web/build/
+
+# Desktop builds
+linux/build/
+windows/build/
+macos/build/
