@@ -1145,7 +1145,7 @@ class SincronizacionScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            // SUPABASE - FUNCIONAL
+            // SUPABASE
             ListTile(
               leading: const Icon(Icons.settings_backup_restore),
               title: const Text('Configurar Supabase'),
@@ -1571,9 +1571,8 @@ class SincronizacionScreen extends ConsumerWidget {
               // en SharedPreferences o secure storage
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text(
-                      '⚠️ En esta demo, las credenciales no se guardan permanentemente'),
-                  backgroundColor: Colors.orange,
+                  content: Text('⚠️ Funcionalidad no disponible...'),
+                  backgroundColor: Colors.red,
                 ),
               );
               Navigator.of(context).pop();
