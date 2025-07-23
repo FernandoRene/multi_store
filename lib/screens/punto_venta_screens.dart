@@ -12,10 +12,10 @@ import 'productos_screens.dart'; // Import para acceder a productosFilteredProvi
 
 class ItemCarrito {
   final Producto producto;
-  int cantidad;
-  double descuentoItem;
+  final int cantidad;
+  final double descuentoItem;
 
-  ItemCarrito({
+  const ItemCarrito({
     required this.producto,
     this.cantidad = 1,
     this.descuentoItem = 0.0,
@@ -23,6 +23,19 @@ class ItemCarrito {
 
   double get subtotal => (producto.precioVenta * cantidad) - descuentoItem;
   double get precioUnitario => producto.precioVenta;
+
+  // ← MÉTODO COPYWITH
+  ItemCarrito copyWith({
+    Producto? producto,
+    int? cantidad,
+    double? descuentoItem,
+  }) {
+    return ItemCarrito(
+      producto: producto ?? this.producto,
+      cantidad: cantidad ?? this.cantidad,
+      descuentoItem: descuentoItem ?? this.descuentoItem,
+    );
+  }
 }
 
 class EstadoCarrito {
@@ -90,29 +103,36 @@ class CarritoNotifier extends StateNotifier<EstadoCarrito> {
 
   void agregarProducto(Producto producto, {int cantidad = 1}) {
     final items = List<ItemCarrito>.from(state.items);
-
-    // Buscar si el producto ya está en el carrito
     final indexExistente =
         items.indexWhere((item) => item.producto.id == producto.id);
 
     if (indexExistente != -1) {
-      // Si existe, aumentar cantidad
-      items[indexExistente].cantidad += cantidad;
-    } else {
-      // Si no existe, agregar nuevo item
-      items.add(ItemCarrito(producto: producto, cantidad: cantidad));
-    }
+      final itemExistente = items[indexExistente];
+      final nuevaCantidad = itemExistente.cantidad + cantidad;
 
+      if (nuevaCantidad <= producto.stockActual) {
+        items[indexExistente] = itemExistente.copyWith(cantidad: nuevaCantidad);
+      }
+    } else {
+      if (cantidad <= producto.stockActual) {
+        items.add(ItemCarrito(producto: producto, cantidad: cantidad));
+      }
+    }
     state = state.copyWith(items: items);
   }
 
   void quitarProducto(int productoId) {
+    print('🗑️ Eliminando producto ID: $productoId'); // Debug
     final items =
         state.items.where((item) => item.producto.id != productoId).toList();
     state = state.copyWith(items: items);
+    print('📊 Items restantes: ${items.length}'); // Debug
   }
 
   void actualizarCantidad(int productoId, int nuevaCantidad) {
+    print(
+        '🔄 Actualizando cantidad - ID: $productoId, Nueva cantidad: $nuevaCantidad'); // Debug
+
     if (nuevaCantidad <= 0) {
       quitarProducto(productoId);
       return;
@@ -120,7 +140,11 @@ class CarritoNotifier extends StateNotifier<EstadoCarrito> {
 
     final items = state.items.map((item) {
       if (item.producto.id == productoId) {
-        item.cantidad = nuevaCantidad;
+        final cantidadFinal = nuevaCantidad > item.producto.stockActual
+            ? item.producto.stockActual
+            : nuevaCantidad;
+        print('✅ Actualizando de ${item.cantidad} a $cantidadFinal'); // Debug
+        return item.copyWith(cantidad: cantidadFinal);
       }
       return item;
     }).toList();
@@ -131,11 +155,10 @@ class CarritoNotifier extends StateNotifier<EstadoCarrito> {
   void aplicarDescuentoItem(int productoId, double descuento) {
     final items = state.items.map((item) {
       if (item.producto.id == productoId) {
-        item.descuentoItem = descuento;
+        return item.copyWith(descuentoItem: descuento);
       }
       return item;
     }).toList();
-
     state = state.copyWith(items: items);
   }
 
@@ -254,7 +277,8 @@ class PuntoVentaScreen extends ConsumerWidget {
                               ),
                             IconButton(
                               icon: const Icon(Icons.qr_code_scanner),
-                              onPressed: () => _simularEscaneoCodigoBarras(ref),
+                              onPressed: () =>
+                                  _simularEscaneoCodigoBarras(context, ref),
                               tooltip: 'Escanear código',
                             ),
                           ],
@@ -782,134 +806,376 @@ class PuntoVentaScreen extends ConsumerWidget {
 
   // MODAL DEL CARRITO
   void _mostrarCarritoCompleto(BuildContext context, WidgetRef ref) {
-    final carrito = ref.watch(carritoProvider);
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        child: Column(
-          children: [
-            // Handle del modal
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+      builder: (context) => Consumer(
+        // ← ENVOLVER EN CONSUMER
+        builder: (context, ref, child) {
+          final carrito =
+              ref.watch(carritoProvider); // ← WATCH DENTRO DEL CONSUMER
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.8,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
             ),
-
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(Icons.shopping_cart),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Carrito (${carrito.totalItems} items)',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+            child: Column(
+              children: [
+                // Handle del modal
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
+                ),
 
-            const Divider(height: 1),
-
-            // Lista de items
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: carrito.items.length,
-                itemBuilder: (context, index) {
-                  final item = carrito.items[index];
-                  return _buildItemCarrito(context, ref, item);
-                },
-              ),
-            ),
-
-            // Totales y botones
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                border: Border(top: BorderSide(color: Colors.grey[200]!)),
-              ),
-              child: Column(
-                children: [
-                  _buildFilaTotales('Subtotal:',
-                      'Bs. ${carrito.subtotalSinDescuento.toStringAsFixed(2)}'),
-                  if (carrito.totalDescuentosItems > 0)
-                    _buildFilaTotales(
-                      'Desc. items:',
-                      '-Bs. ${carrito.totalDescuentosItems.toStringAsFixed(2)}',
-                      color: Colors.red[600],
-                    ),
-                  if (carrito.descuentoGeneral > 0)
-                    _buildFilaTotales(
-                      'Desc. general:',
-                      '-Bs. ${carrito.descuentoGeneral.toStringAsFixed(2)}',
-                      color: Colors.red[600],
-                    ),
-                  const Divider(),
-                  _buildFilaTotales(
-                    'TOTAL:',
-                    'Bs. ${carrito.totalFinal.toStringAsFixed(2)}',
-                    isTotal: true,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
+                      const Icon(Icons.shopping_cart),
+                      const SizedBox(width: 8),
                       Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () =>
-                              _mostrarDialogoDescuento(context, ref),
-                          icon: const Icon(Icons.percent, size: 16),
-                          label: const Text('Descuento'),
+                        child: Text(
+                          'Carrito (${carrito.totalItems} items)',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _irAProcesarPago(context, ref);
-                          },
-                          icon: const Icon(Icons.payment),
-                          label: const Text('PROCESAR VENTA'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green[600],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(height: 1),
+
+                // Lista de items CORREGIDA
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: carrito.items.length,
+                    itemBuilder: (context, index) {
+                      final item = carrito.items[index];
+                      return _buildItemCarritoModal(
+                          context, ref, item); // ← MÉTODO NUEVO
+                    },
+                  ),
+                ),
+
+                // Resto del código igual...
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildFilaTotales('Subtotal:',
+                          'Bs. ${carrito.subtotalSinDescuento.toStringAsFixed(2)}'),
+                      if (carrito.totalDescuentosItems > 0)
+                        _buildFilaTotales('Desc. items:',
+                            '-Bs. ${carrito.totalDescuentosItems.toStringAsFixed(2)}',
+                            color: Colors.red[600]),
+                      if (carrito.descuentoGeneral > 0)
+                        _buildFilaTotales('Desc. general:',
+                            '-Bs. ${carrito.descuentoGeneral.toStringAsFixed(2)}',
+                            color: Colors.red[600]),
+                      const Divider(),
+                      _buildFilaTotales('TOTAL:',
+                          'Bs. ${carrito.totalFinal.toStringAsFixed(2)}',
+                          isTotal: true),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  _mostrarDialogoDescuento(context, ref),
+                              icon: const Icon(Icons.percent, size: 16),
+                              label: const Text('Descuento'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _irAProcesarPago(context, ref);
+                              },
+                              icon: const Icon(Icons.payment),
+                              label: const Text('PROCESAR VENTA'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green[600],
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildItemCarritoModal(
+      BuildContext context, WidgetRef ref, ItemCarrito item) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header del item
+            Row(
+              children: [
+                // Información del producto
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.producto.nombre,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Bs. ${item.precioUnitario.toStringAsFixed(2)} c/u',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        'Stock disponible: ${item.producto.stockActual}',
+                        style: TextStyle(
+                          color: Colors.orange[600],
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Botón eliminar CORREGIDO
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      print(
+                          '🚨 CLIC EN ELIMINAR - Producto ID: ${item.producto.id}');
+                      HapticFeedback.lightImpact();
+                      ref
+                          .read(carritoProvider.notifier)
+                          .quitarProducto(item.producto.id);
+                    },
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.red[200]!),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: Colors.red[600],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Controles de cantidad
+            Row(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Botón menos
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: item.cantidad > 1
+                              ? () {
+                                  print(
+                                      '🚨 CLIC EN MENOS - Producto ID: ${item.producto.id}');
+                                  HapticFeedback.lightImpact();
+                                  ref
+                                      .read(carritoProvider.notifier)
+                                      .actualizarCantidad(
+                                          item.producto.id, item.cantidad - 1);
+                                }
+                              : null,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(8),
+                            bottomLeft: Radius.circular(8),
+                          ),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            child: Icon(
+                              Icons.remove,
+                              size: 20,
+                              color: item.cantidad > 1
+                                  ? Colors.red[600]
+                                  : Colors.grey[400],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Cantidad
+                      Container(
+                        width: 60,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          border: Border.symmetric(
+                            vertical: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          color: Colors.grey[50],
+                        ),
+                        child: Center(
+                          child: Text(
+                            item.cantidad.toString(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Botón más
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: item.cantidad < item.producto.stockActual
+                              ? () {
+                                  print(
+                                      '🚨 CLIC EN MÁS - Producto ID: ${item.producto.id}');
+                                  HapticFeedback.lightImpact();
+                                  ref
+                                      .read(carritoProvider.notifier)
+                                      .actualizarCantidad(
+                                          item.producto.id, item.cantidad + 1);
+                                }
+                              : null,
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            child: Icon(
+                              Icons.add,
+                              size: 20,
+                              color: item.cantidad < item.producto.stockActual
+                                  ? Colors.green[600]
+                                  : Colors.grey[400],
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+
+                const SizedBox(width: 12),
+
+                // Indicador de stock máximo
+                if (item.cantidad >= item.producto.stockActual)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[100],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange[300]!),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.warning_amber,
+                            size: 12, color: Colors.orange[700]),
+                        const SizedBox(width: 4),
+                        Text(
+                          'STOCK MÁXIMO',
+                          style: TextStyle(
+                            color: Colors.orange[700],
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                const Spacer(),
+
+                // Subtotal
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Bs. ${item.subtotal.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                    if (item.descuentoItem > 0)
+                      Text(
+                        '-Bs. ${item.descuentoItem.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: Colors.red[600],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),
@@ -951,31 +1217,52 @@ class PuntoVentaScreen extends ConsumerWidget {
                           fontSize: 12,
                         ),
                       ),
+                      // ← NUEVO: Mostrar stock disponible
+                      Text(
+                        'Stock disponible: ${item.producto.stockActual}',
+                        style: TextStyle(
+                          color: Colors.orange[600],
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                // Botón eliminar
-                SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: () => ref
-                        .read(carritoProvider.notifier)
-                        .quitarProducto(item.producto.id),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                // ← CORREGIDO: Botón eliminar
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      ref
+                          .read(carritoProvider.notifier)
+                          .quitarProducto(item.producto.id);
+                    },
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.red[200]!),
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Colors.red[600],
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
 
-            // Controles de cantidad y subtotal
+            // ← CORREGIDOS: Controles de cantidad
             Row(
               children: [
-                // Controles de cantidad
                 Container(
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey[300]!),
@@ -985,18 +1272,31 @@ class PuntoVentaScreen extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Botón menos
-                      InkWell(
-                        onTap: () => ref
-                            .read(carritoProvider.notifier)
-                            .actualizarCantidad(
-                                item.producto.id, item.cantidad - 1),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(8),
-                          bottomLeft: Radius.circular(8),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: const Icon(Icons.remove, size: 16),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: item.cantidad > 1
+                              ? () {
+                                  ref
+                                      .read(carritoProvider.notifier)
+                                      .actualizarCantidad(
+                                          item.producto.id, item.cantidad - 1);
+                                }
+                              : null,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(8),
+                            bottomLeft: Radius.circular(8),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(
+                              Icons.remove,
+                              size: 16,
+                              color: item.cantidad > 1
+                                  ? Colors.black
+                                  : Colors.grey[400],
+                            ),
+                          ),
                         ),
                       ),
                       // Cantidad
@@ -1010,29 +1310,37 @@ class PuntoVentaScreen extends ConsumerWidget {
                         ),
                         child: Text(
                           item.cantidad.toString(),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
-                      // Botón más
-                      InkWell(
-                        onTap: item.cantidad < item.producto.stockActual
-                            ? () => ref
-                                .read(carritoProvider.notifier)
-                                .actualizarCantidad(
-                                    item.producto.id, item.cantidad + 1)
-                            : null,
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(8),
-                          bottomRight: Radius.circular(8),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.add,
-                            size: 16,
-                            color: item.cantidad < item.producto.stockActual
-                                ? null
-                                : Colors.grey,
+                      // Botón más CON VALIDACIÓN DE STOCK
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: item.cantidad < item.producto.stockActual
+                              ? () {
+                                  ref
+                                      .read(carritoProvider.notifier)
+                                      .actualizarCantidad(
+                                          item.producto.id, item.cantidad + 1);
+                                }
+                              : null,
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(
+                              Icons.add,
+                              size: 16,
+                              color: item.cantidad < item.producto.stockActual
+                                  ? Colors.black
+                                  : Colors.grey[400],
+                            ),
                           ),
                         ),
                       ),
@@ -1040,29 +1348,81 @@ class PuntoVentaScreen extends ConsumerWidget {
                   ),
                 ),
 
+                const SizedBox(width: 12),
+
+                // ← NUEVO: Indicador de stock máximo
+                if (item.cantidad >= item.producto.stockActual)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[100],
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.orange[300]!),
+                    ),
+                    child: Text(
+                      'STOCK MÁXIMO',
+                      style: TextStyle(
+                        color: Colors.orange[700],
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+
                 const Spacer(),
 
                 // Subtotal
-                Text(
-                  'Bs. ${item.subtotal.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Bs. ${item.subtotal.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    if (item.descuentoItem > 0)
+                      Text(
+                        '-Bs. ${item.descuentoItem.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: Colors.red[600],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
 
-            // Descuento por item (si existe)
+            // ← MEJORADO: Descuento por item
             if (item.descuentoItem > 0)
               Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Descuento: -Bs. ${item.descuentoItem.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    color: Colors.red[600],
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                padding: const EdgeInsets.only(top: 8),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.red[200]!),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.local_offer, size: 12, color: Colors.red[600]),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Descuento aplicado: -Bs. ${item.descuentoItem.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: Colors.red[600],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1101,13 +1461,29 @@ class PuntoVentaScreen extends ConsumerWidget {
     );
   }
 
-  // MÉTODOS DE ACCIÓN (SIN CAMBIOS FUNCIONALES)
+  // MÉTODOS DE ACCIÓN
   void _agregarAlCarrito(WidgetRef ref, Producto producto) {
-    ref.read(carritoProvider.notifier).agregarProducto(producto);
-    HapticFeedback.lightImpact();
+    final carrito = ref.read(carritoProvider);
+
+    // Buscar si el producto ya está en el carrito
+    final itemExistente = carrito.items.cast<ItemCarrito?>().firstWhere(
+          (item) => item?.producto.id == producto.id,
+          orElse: () => null,
+        );
+
+    // Calcular cantidad total que tendría después de agregar
+    final cantidadTotal =
+        itemExistente != null ? itemExistente.cantidad + 1 : 1;
+
+    if (cantidadTotal <= producto.stockActual) {
+      ref.read(carritoProvider.notifier).agregarProducto(producto);
+      HapticFeedback.lightImpact();
+    } else {
+      HapticFeedback.mediumImpact();
+    }
   }
 
-  void _simularEscaneoCodigoBarras(WidgetRef ref) {
+  void _simularEscaneoCodigoBarras(BuildContext context, WidgetRef ref) {
     final codigosDemo = ['7501234567890', '7501234567891'];
     final codigoRandom = codigosDemo[math.Random().nextInt(codigosDemo.length)];
 
